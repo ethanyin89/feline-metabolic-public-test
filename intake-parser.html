@@ -1,0 +1,1139 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>猫代谢研究需求评估</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s ease;
+        }
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+        .gap-flag {
+            border-left: 3px solid #f59e0b;
+            background: #fffbeb;
+        }
+        @media (max-width: 640px) {
+            .toast {
+                left: 16px;
+                right: 16px;
+                bottom: 16px;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Header -->
+    <header class="bg-slate-800 text-white py-4 px-6">
+        <div class="max-w-5xl mx-auto flex justify-between items-center">
+            <div>
+                <h1 class="text-xl font-bold">猫代谢研究需求评估</h1>
+                <p class="text-sm text-slate-300">猫代谢疾病 · 模型适配 · 终点建议</p>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-5xl mx-auto py-8 px-6">
+        <!-- Product Positioning (Collapsible) -->
+        <section class="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
+            <button onclick="toggleServiceInfo()" class="w-full p-4 flex justify-between items-center text-left hover:bg-gray-50 transition-colors">
+                <div>
+                    <h2 class="font-semibold text-gray-800">服务范围说明</h2>
+                    <p class="text-sm text-gray-500">了解本工具能做什么、不能做什么</p>
+                </div>
+                <span id="serviceInfoToggle" class="text-gray-400 text-xl">▼</span>
+            </button>
+            <div id="serviceInfoContent" class="hidden border-t border-gray-200">
+                <div class="p-4">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                            <div class="text-xs text-blue-600 font-semibold uppercase">当前能做</div>
+                            <div class="mt-1 font-semibold text-blue-900">初步研究方向判断</div>
+                            <div class="mt-2 text-sm text-blue-800">把客户原话转成模型适配、风险提示、待确认问题和下一步建议。</div>
+                        </div>
+                        <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+                            <div class="text-xs text-red-600 font-semibold uppercase">暂不承诺</div>
+                            <div class="mt-1 font-semibold text-red-900">不直接生成正式方案和报价</div>
+                            <div class="mt-2 text-sm text-red-800">动物数量、身体数据、剂量、报价和排期需要真实资源表、SOP 或研究负责人确认。</div>
+                        </div>
+                        <div class="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
+                            <div class="text-xs text-emerald-600 font-semibold uppercase">下一步</div>
+                            <div class="mt-1 font-semibold text-emerald-900">确认研究目的和资料缺口</div>
+                            <div class="mt-2 text-sm text-emerald-800">先判断研究目的、业务线、交付物类型和人工审核节点，再决定输出什么。</div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-5 gap-3 text-sm">
+                        <div class="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                            <div class="font-semibold text-gray-800">需求类型</div>
+                            <div class="text-gray-600 mt-1">机制、药效、剂量、PK/PD、安评、资源询价</div>
+                        </div>
+                        <div class="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                            <div class="font-semibold text-gray-800">业务分流</div>
+                            <div class="text-gray-600 mt-1">临床前研究、药效模型、PK/PD、毒理、临床运营</div>
+                        </div>
+                        <div class="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                            <div class="font-semibold text-gray-800">建议交付物</div>
+                            <div class="text-gray-600 mt-1">评估、澄清邮件、研究摘要、方案框架、报价边界</div>
+                        </div>
+                        <div class="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                            <div class="font-semibold text-gray-800">人工确认</div>
+                            <div class="text-gray-600 mt-1">研究设计、客户信息、资源、报价、合规边界</div>
+                        </div>
+                        <div class="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                            <div class="font-semibold text-gray-800">规则沉淀</div>
+                            <div class="text-gray-600 mt-1">把人工修正沉淀成下一次分流规则</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Input Section -->
+        <section class="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
+            <div class="p-4 border-b border-gray-200">
+                <h2 class="font-semibold text-gray-800">客户需求输入</h2>
+                <p class="text-sm text-gray-500">粘贴客户原话（中英文均可）</p>
+            </div>
+            <div class="p-4">
+                <textarea
+                    id="requestInput"
+                    class="w-full h-40 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+                    placeholder="示例：我们有一个 GalNAc 小核酸，想做猫糖尿病模型，靶基因是 ANGPTL3，想看看能不能降低血糖和体重。"></textarea>
+
+                <div class="mt-4 flex flex-wrap gap-3">
+                    <button
+                        id="parseBtn"
+                        onclick="parseRequest()"
+                        class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg font-medium transition-colors flex items-center gap-2">
+                        <span id="parseBtnText">生成初步判断</span>
+                    </button>
+                    <button
+                        onclick="clearInput()"
+                        class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2.5 rounded-lg font-medium transition-colors">
+                        清空
+                    </button>
+                    <button
+                        onclick="loadExample()"
+                        class="text-blue-600 hover:text-blue-700 px-4 py-2.5 font-medium">
+                        示例
+                    </button>
+                </div>
+                <div id="aiStatus" class="hidden mt-3 text-sm rounded-lg px-3 py-2 border"></div>
+            </div>
+        </section>
+
+        <!-- Results Section (hidden initially) -->
+        <section id="resultsSection" class="hidden">
+            <!-- Results Summary -->
+            <div id="resultsSummary" class="bg-blue-600 text-white rounded-lg shadow-sm mb-6 p-4">
+                <div class="flex flex-wrap items-center justify-between gap-4">
+                    <div>
+                        <div class="text-lg font-semibold" id="summaryTitle">初步判断已生成</div>
+                        <div class="text-blue-100 text-sm" id="summaryStats">正在分析...</div>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="scrollToEmail()" class="bg-white text-blue-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-50">
+                            查看建议沟通内容 ↓
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Parsed Elements -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
+                <div class="p-4 border-b border-gray-200 flex justify-between items-center">
+                    <div>
+                        <h2 class="font-semibold text-gray-800">需求要点</h2>
+                        <p class="text-sm text-gray-500">从客户原话中识别出的关键信息</p>
+                    </div>
+                </div>
+                <div class="p-4">
+                    <div id="parsedElements" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- Dynamically filled -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Workflow Decision Summary -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
+                <div class="p-4 border-b border-gray-200">
+                    <h2 class="font-semibold text-gray-800">业务决策摘要</h2>
+                    <p class="text-sm text-gray-500">判断这次需求应该先输出评估、澄清问题，还是进入正式方案设计</p>
+                </div>
+                <div class="p-4">
+                    <div id="workflowSummary" class="space-y-4">
+                        <!-- Dynamically filled -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- International Expert Perspectives -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
+                <div class="p-4 border-b border-gray-200">
+                    <h2 class="font-semibold text-gray-800">国际专家视角</h2>
+                    <p class="text-sm text-gray-500">基于国际学术标准的研究方向建议</p>
+                </div>
+                <div class="p-4">
+                    <div id="internationalExpertCheck" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <!-- Dynamically filled -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Domestic Expert Cross Check -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
+                <div class="p-4 border-b border-gray-200">
+                    <h2 class="font-semibold text-gray-800">国内同行视角</h2>
+                    <p class="text-sm text-gray-500">结合国内 CRO 实际的可执行审核逻辑</p>
+                </div>
+                <div class="p-4">
+                    <div id="domesticExpertCheck" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <!-- Dynamically filled -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Gap Flags -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
+                <div class="p-4 border-b border-gray-200">
+                    <h2 class="font-semibold text-gray-800 flex items-center gap-2">
+                        <span class="text-amber-500">⚠</span>
+                        风险与缺口
+                    </h2>
+                    <p class="text-sm text-gray-500">需要进一步确认的信息和研究边界</p>
+                </div>
+                <div class="p-4">
+                    <div id="gapFlags" class="space-y-2">
+                        <!-- Dynamically filled -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Clarification Email -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
+                <div class="p-4 border-b border-gray-200 flex justify-between items-center">
+                    <div>
+                        <h2 class="font-semibold text-gray-800">建议沟通内容</h2>
+                        <p class="text-sm text-gray-500">可用于下一轮客户确认</p>
+                    </div>
+                    <button onclick="copyEmail()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium">
+                        复制内容
+                    </button>
+                </div>
+                <div class="p-4">
+                    <div id="clarificationEmail" class="bg-gray-50 p-4 rounded-lg text-sm leading-6 whitespace-pre-wrap border border-gray-200">
+                        <!-- Dynamically filled -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Evidence Sources -->
+            <div id="referencesSection" class="bg-white rounded-lg shadow-sm border border-gray-200 mb-6 hidden">
+                <div class="p-4 border-b border-gray-200">
+                    <h2 class="font-semibold text-gray-800">判断依据</h2>
+                    <p class="text-sm text-gray-500">用于校验的信息来源</p>
+                </div>
+                <div class="p-4">
+                    <div id="referenceSources" class="space-y-2">
+                        <!-- Dynamically filled -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Study Direction - Expert Perspectives -->
+            <div id="protocolSection" class="bg-white rounded-lg shadow-sm border border-gray-200 mb-6 hidden">
+                <div class="p-4 border-b border-gray-200 flex justify-between items-center">
+                    <div>
+                        <h2 class="font-semibold text-gray-800">初步研究建议</h2>
+                        <p class="text-sm text-gray-500">基于当前信息的下一步建议，不是正式实验方案</p>
+                    </div>
+                    <button onclick="copyProtocol()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium">
+                        复制建议
+                    </button>
+                </div>
+                <div class="p-4">
+                    <div id="protocolContent" class="space-y-6">
+                        <!-- Dynamically filled -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- History Section -->
+        <section class="bg-white rounded-lg shadow-sm border border-gray-200">
+            <div class="p-4 border-b border-gray-200 flex justify-between items-center">
+                <div>
+                    <h2 class="font-semibold text-gray-800">最近评估记录</h2>
+                    <p class="text-sm text-gray-500">仅保存在当前浏览器</p>
+                </div>
+                <button onclick="clearHistory()" class="text-sm text-red-600 hover:text-red-700">
+                    清空记录
+                </button>
+            </div>
+            <div class="p-4">
+                <div id="historyList" class="space-y-2">
+                    <p class="text-gray-400 text-sm">暂无评估记录</p>
+                </div>
+            </div>
+        </section>
+    </main>
+    <!-- Toast -->
+    <div id="toast" class="toast bg-gray-800 text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-3">
+        <span id="toastMessage"></span>
+        <button onclick="hideToast()" class="text-gray-400 hover:text-white">&times;</button>
+    </div>
+
+    <script>
+        // State
+        let currentResult = null;
+        let parseHistory = JSON.parse(localStorage.getItem('intakeParser_history') || '[]');
+
+        // User-friendly labels for technical field values
+        const FIELD_LABELS = {
+            drug_type: {
+                'GalNAc_siRNA': 'GalNAc 小核酸',
+                'other': '其他药物类型',
+                'small_molecule': '小分子药物',
+                'antibody': '抗体药物',
+                'peptide': '多肽药物'
+            },
+            study_intent: {
+                'mechanism_validation': '机制验证',
+                'efficacy_exploration': '药效探索',
+                'dose_exploration': '剂量探索',
+                'PK_PD': 'PK/PD 研究',
+                'toxicology': '毒理/安评',
+                'model_resource_inquiry': '模型资源询价'
+            }
+        };
+
+        function friendlyLabel(field, value) {
+            if (!value || isMissingValue(value)) return null;
+            return FIELD_LABELS[field]?.[value] || value;
+        }
+
+        const WORKFLOW_LABELS = {
+            studyIntent: {
+                mechanism_validation: '机制验证',
+                efficacy_exploration: '药效探索',
+                dose_exploration: '剂量探索',
+                PK_PD: 'PK/PD',
+                toxicology: '毒理/安评',
+                model_resource_inquiry: '模型资源询价',
+                clinical_operations: '临床运营项目'
+            },
+            domainRoute: {
+                preclinical_study_design: '临床前研究设计',
+                efficacy_model_evaluation: '药效模型评估',
+                preclinical_pkpd: '临床前 PK/PD',
+                toxicology_safety: '毒理与安全性评估',
+                clinical_operations: '临床运营',
+                data_management: '数据管理',
+                regulatory_report: '注册与研究报告'
+            },
+            deliverableType: {
+                intake_note: '需求记录',
+                model_fit_assessment: '模型适配评估',
+                clarification_email: '客户澄清问题',
+                study_design_memo: '研究设计摘要',
+                protocol_outline: '方案框架',
+                quotation_structure: '报价结构',
+                risk_checklist: '风险清单',
+                internal_review_note: '内部复核记录'
+            }
+        };
+
+        function getParsedElements(result) {
+            return result.parsed_elements || result || {};
+        }
+
+        function isMissingValue(value) {
+            return value === null ||
+                value === undefined ||
+                value === '' ||
+                value === 'N/A' ||
+                value === 'null';
+        }
+
+        function publicValue(value, fallback = '待确认') {
+            return isMissingValue(value) ? fallback : value;
+        }
+
+        function publicList(items, fallback = ['待客户资料或内部资源表确认']) {
+            if (!Array.isArray(items)) return fallback;
+            const clean = items.filter(item => !isMissingValue(item));
+            return clean.length > 0 ? clean : fallback;
+        }
+
+        function getRequestText(result) {
+            const input = document.getElementById('requestInput')?.value || '';
+            return `${result.raw_request || input || ''}`.toLowerCase();
+        }
+
+        function inferDecisionWorkflow(result) {
+            const pe = getParsedElements(result);
+            const text = getRequestText(result);
+            const missing = result.missing_critical || result.missing_fields || [];
+            const risks = result.risk_flags || [];
+
+            let studyIntent = pe.study_intent || 'efficacy_exploration';
+            if (/报价|数量|资源|动物|现有模型/.test(text)) studyIntent = 'model_resource_inquiry';
+            if (/毒理|安评|安全性|tox|adverse/.test(text)) studyIntent = 'toxicology';
+            if (/pk|pd|药代|暴露|时间窗/.test(text)) studyIntent = 'PK_PD';
+            if (/galnac|sirna|小核酸|kd|qpcr|靶基因/.test(text)) studyIntent = 'mechanism_validation';
+            if (/临床运营|cra|中心|入组|sdv|query/.test(text)) studyIntent = 'clinical_operations';
+
+            let domainRoute = 'preclinical_study_design';
+            if (studyIntent === 'model_resource_inquiry') domainRoute = 'efficacy_model_evaluation';
+            if (studyIntent === 'PK_PD') domainRoute = 'preclinical_pkpd';
+            if (studyIntent === 'toxicology') domainRoute = 'toxicology_safety';
+            if (studyIntent === 'clinical_operations') domainRoute = 'clinical_operations';
+
+            let deliverableType = 'study_design_memo';
+            if (studyIntent === 'model_resource_inquiry') deliverableType = 'clarification_email';
+            if (studyIntent === 'mechanism_validation' && (!pe.target_gene || pe.target_gene === 'null')) deliverableType = 'model_fit_assessment';
+            if (studyIntent === 'toxicology') deliverableType = 'risk_checklist';
+            if (/报价|pricing|quote/.test(text)) deliverableType = 'quotation_structure';
+            if (missing.length >= 2 || risks.length >= 2) deliverableType = deliverableType === 'quotation_structure' ? 'quotation_structure' : 'model_fit_assessment';
+
+            const reviewGates = ['Scientific Review', 'BD Review'];
+            if (['efficacy_model_evaluation', 'preclinical_study_design'].includes(domainRoute)) reviewGates.push('Resource Review');
+            if (deliverableType === 'quotation_structure') reviewGates.push('Pricing Review');
+            if (['protocol_outline', 'risk_checklist'].includes(deliverableType) || studyIntent === 'toxicology') reviewGates.push('QA / Compliance Review');
+
+            const ruleUpdates = [];
+            if ((/糖尿病|diabetes/.test(text)) && result.model_recommendation?.recommended && !/稳定糖尿病/.test(result.model_recommendation.recommended)) {
+                ruleUpdates.push('当客户说“糖尿病模型”但推荐模型不是稳定糖尿病猫时，页面必须提示模型边界，不能自动写成糖尿病治疗评价。');
+            }
+            if (/galnac|sirna|小核酸/.test(text)) {
+                ruleUpdates.push('当客户说 GalNAc/小核酸时，第一层输出必须先确认靶组织、靶基因猫序列、KD 终点和 PD 时间窗。');
+            }
+            if (/报价|数量|资源|现有模型/.test(text)) {
+                ruleUpdates.push('当客户索要动物数量、身体数据或报价时，缺少 Class B 内部数据前只能输出澄清邮件和内部材料请求。');
+            }
+
+            return { studyIntent, domainRoute, deliverableType, reviewGates, ruleUpdates };
+        }
+
+        function renderDecisionWorkflow(result) {
+            const workflow = inferDecisionWorkflow(result);
+            const pe = getParsedElements(result);
+            const missing = result.missing_critical || result.missing_fields || [];
+            const publicGateLabels = {
+                'Scientific Review': '研究设计复核',
+                'BD Review': '客户信息确认',
+                'Resource Review': '模型资源确认',
+                'Pricing Review': '报价边界确认',
+                'QA / Compliance Review': '合规与动物福利确认'
+            };
+
+            document.getElementById('workflowSummary').innerHTML = `
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <div class="text-xs text-blue-600 font-semibold uppercase">需求类型</div>
+                        <div class="mt-1 font-semibold text-blue-900">${WORKFLOW_LABELS.studyIntent[workflow.studyIntent] || workflow.studyIntent}</div>
+                        <div class="mt-2 text-xs text-blue-700">决定后续是机制、药效、PK/PD、安评还是资源询价。</div>
+                    </div>
+                    <div class="bg-indigo-50 border border-indigo-200 rounded-lg p-4">
+                        <div class="text-xs text-indigo-600 font-semibold uppercase">业务分流</div>
+                        <div class="mt-1 font-semibold text-indigo-900">${WORKFLOW_LABELS.domainRoute[workflow.domainRoute] || workflow.domainRoute}</div>
+                        <div class="mt-2 text-xs text-indigo-700">防止所有需求都被塞进 study design。</div>
+                    </div>
+                    <div class="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
+                        <div class="text-xs text-emerald-600 font-semibold uppercase">建议交付物</div>
+                        <div class="mt-1 font-semibold text-emerald-900">${WORKFLOW_LABELS.deliverableType[workflow.deliverableType] || workflow.deliverableType}</div>
+                        <div class="mt-2 text-xs text-emerald-700">当前最合适的输出物，不默认跳到正式实验方案。</div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                        <div class="font-semibold text-gray-800 mb-2">下一步确认项</div>
+                        <div class="space-y-2">
+                            ${workflow.reviewGates.map(gate => `
+                                <div class="flex items-center justify-between text-sm">
+                                    <span>${publicGateLabels[gate] || gate}</span>
+                                    <span class="px-2 py-0.5 rounded bg-amber-100 text-amber-700 text-xs">需确认</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                    <div class="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                        <div class="font-semibold text-amber-900 mb-2">判断规则说明</div>
+                        <div class="text-sm text-amber-800 space-y-1">
+                            ${workflow.ruleUpdates.length > 0 ? workflow.ruleUpdates.map(rule => `<div>• ${rule}</div>`).join('') : '<div>• 暂无新增规则。继续保留真实资料确认和人工审核边界。</div>'}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+                    <div class="font-semibold text-red-900 mb-2">信息边界说明</div>
+                    <div class="text-sm text-red-800">
+                        当前靶点: ${publicValue(pe.target_gene)} · 需补充信息: ${missing.length}
+                    </div>
+                    <div class="text-xs text-red-700 mt-1">
+                        动物数量、报价、timeline、SOP、样本量、剂量推荐必须来自真实材料。当前页面会把这些内容列为待确认，不会自动编造。
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderInternationalExpertCheck(result) {
+            const pe = getParsedElements(result);
+            const text = getRequestText(result);
+            const model = publicValue(result.model_recommendation?.recommended);
+            const target = publicValue(pe.target_gene);
+
+            const experts = [
+                {
+                    name: 'Lisa Freeman, DVM PhD DACVIM(Nutrition)',
+                    credentials: '塔夫茨大学卡明斯兽医学院营养学教授',
+                    subtitle: '营养/代谢专家',
+                    icon: '🥗',
+                    style: {
+                        card: 'bg-green-50 border-green-200',
+                        title: 'text-green-900',
+                        subtitle: 'text-green-700',
+                        border: 'border-green-200'
+                    },
+                    checks: [
+                        '饮食成分对代谢指标的影响评估',
+                        '营养干预设计与体重管理方案'
+                    ]
+                },
+                {
+                    name: 'Stijn Niessen, DVM PhD DECVIM-CA',
+                    credentials: '皇家兽医学院内分泌学高级讲师',
+                    subtitle: '内分泌专家',
+                    icon: '🔬',
+                    style: {
+                        card: 'bg-purple-50 border-purple-200',
+                        title: 'text-purple-900',
+                        subtitle: 'text-purple-700',
+                        border: 'border-purple-200'
+                    },
+                    checks: [
+                        '糖尿病诊断边界与分型标准',
+                        '胰岛素抵抗机制与缓解标准'
+                    ]
+                },
+                {
+                    name: '转化药效顾问',
+                    credentials: '跨物种药理学与临床转化',
+                    subtitle: '转化药效专家',
+                    icon: '💊',
+                    style: {
+                        card: 'bg-blue-50 border-blue-200',
+                        title: 'text-blue-900',
+                        subtitle: 'text-blue-700',
+                        border: 'border-blue-200'
+                    },
+                    checks: [
+                        '单次给药 PK 和组织分布评估',
+                        '跨物种剂量转换与临床转化路径'
+                    ]
+                }
+            ];
+
+            document.getElementById('internationalExpertCheck').innerHTML = experts.map(expert => `
+                <div class="${expert.style.card} border rounded-lg p-4">
+                    <div class="flex items-start gap-2">
+                        <span class="text-lg">${expert.icon}</span>
+                        <div class="flex-1 min-w-0">
+                            <div class="${expert.style.title} font-semibold text-sm leading-tight">${expert.name}</div>
+                            <div class="${expert.style.subtitle} text-xs mt-0.5">${expert.credentials}</div>
+                        </div>
+                    </div>
+                    <div class="mt-3 space-y-2 text-sm text-gray-700">
+                        ${expert.checks.map(check => `<div>✓ ${check}</div>`).join('')}
+                    </div>
+                    <div class="mt-3 pt-3 border-t ${expert.style.border} text-xs text-gray-500">
+                        基于国际学术标准的审核视角
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderDomesticExpertCheck(result) {
+            const pe = getParsedElements(result);
+            const workflow = inferDecisionWorkflow(result);
+            const text = getRequestText(result);
+            const model = publicValue(result.model_recommendation?.recommended);
+            const target = publicValue(pe.target_gene);
+
+            const experts = [
+                {
+                    name: '夏兆飞',
+                    credentials: '中国农业大学动物医学院',
+                    subtitle: '营养肥胖专家 · 模型分类与适用边界',
+                    icon: '🎯',
+                    style: {
+                        card: 'bg-red-50 border-red-200',
+                        title: 'text-red-900',
+                        subtitle: 'text-red-700',
+                        border: 'border-red-200'
+                    },
+                    checks: [
+                        `先判断 ${model} 是肥胖/代谢异常模型，还是可支持糖尿病治疗评价。`,
+                        '要求 BCS/MCS、饮食方案、模型来源和执行边界。'
+                    ]
+                },
+                {
+                    name: '王姜维',
+                    credentials: '上海蓝石宠物医院',
+                    subtitle: '内分泌专家 · 糖尿病诊断标准校验',
+                    icon: '🧪',
+                    style: {
+                        card: 'bg-orange-50 border-orange-200',
+                        title: 'text-orange-900',
+                        subtitle: 'text-orange-700',
+                        border: 'border-orange-200'
+                    },
+                    checks: [
+                        'DIO 肥胖猫不能自动等同于稳定糖尿病猫。',
+                        '血糖、果糖胺、胰岛素、尿糖、临床症状要分清能证明什么。'
+                    ]
+                },
+                {
+                    name: '梁子才',
+                    credentials: '瑞博生物创始人、董事长兼CEO',
+                    subtitle: 'GalNAc/siRNA专家 · 靶点验证与 PK-PD',
+                    icon: '🧬',
+                    style: {
+                        card: 'bg-cyan-50 border-cyan-200',
+                        title: 'text-cyan-900',
+                        subtitle: 'text-cyan-700',
+                        border: 'border-cyan-200'
+                    },
+                    checks: [
+                        /galnac|sirna|小核酸/.test(text) ? `当前靶基因: ${target}。先看靶组织、KD、PD 时间窗，不直接跳糖尿病药效。` : '如涉及小核酸，再补靶组织、KD、组织暴露和跨物种转化证据。',
+                        workflow.studyIntent === 'mechanism_validation' ? '单次给药优先定义为机制验证。' : '非机制验证需求也要保留机制链边界。'
+                    ]
+                }
+            ];
+
+            document.getElementById('domesticExpertCheck').innerHTML = experts.map(expert => `
+                <div class="${expert.style.card} border rounded-lg p-4">
+                    <div class="flex items-start gap-2">
+                        <span class="text-lg">${expert.icon}</span>
+                        <div class="flex-1 min-w-0">
+                            <div class="${expert.style.title} font-semibold text-sm leading-tight">${expert.name}</div>
+                            <div class="${expert.style.subtitle} text-xs mt-0.5">${expert.credentials}</div>
+                        </div>
+                    </div>
+                    <div class="mt-3 space-y-2 text-sm text-gray-700">
+                        ${expert.checks.map(check => `<div>✓ ${check}</div>`).join('')}
+                    </div>
+                    <div class="mt-3 pt-3 border-t ${expert.style.border} text-xs text-gray-500">
+                        ${expert.subtitle}
+                    </div>
+                </div>
+            `).join('');
+        }
+        // Toast
+        function showToast(message, isError = false) {
+            const toast = document.getElementById('toast');
+            const toastMessage = document.getElementById('toastMessage');
+            toastMessage.textContent = message;
+            toast.className = `toast ${isError ? 'bg-red-600' : 'bg-gray-800'} text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-3 show`;
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 4000);
+        }
+
+        function hideToast() {
+            document.getElementById('toast').classList.remove('show');
+        }
+
+        function setAIStatus(message, type = 'info') {
+            const status = document.getElementById('aiStatus');
+            if (!status) return;
+
+            if (!message) {
+                status.classList.add('hidden');
+                status.textContent = '';
+                return;
+            }
+
+            const styles = {
+                info: 'bg-blue-50 border-blue-200 text-blue-800',
+                success: 'bg-green-50 border-green-200 text-green-800',
+                warning: 'bg-amber-50 border-amber-200 text-amber-800',
+                error: 'bg-red-50 border-red-200 text-red-800'
+            };
+            status.className = `mt-3 text-sm rounded-lg px-3 py-2 border ${styles[type] || styles.info}`;
+            status.textContent = message;
+        }
+        // Parse request
+        async function parseRequest() {
+            const input = document.getElementById('requestInput').value.trim();
+            if (!input) {
+                showToast('请先输入客户需求', true);
+                return;
+            }
+
+            const localResult = buildLocalRuleResult(input, 'Immediate local rule-based parse');
+            currentResult = localResult;
+            displayResults(localResult);
+            saveToHistory(input, localResult);
+            showToast('初步判断已生成');
+            setAIStatus('初步判断已生成，可以先查看结果。', 'success');
+        }
+        function buildLocalRuleResult(input, fallbackReason) {
+            const text = input.toLowerCase();
+            const hasGalnac = /galnac|sirna|小核酸/.test(text);
+            const hasDio = /dio|饮食诱导|肥胖模型/.test(text);
+            const asksPricing = /报价|价格|费用|数量|动物数量|现有模型/.test(text);
+            const mentionsDiabetes = /糖尿病|diabetes|血糖/.test(text);
+            const mentionsWeight = /肥胖|体重|weight|obesity/.test(text);
+            const targetMatch = input.match(/靶基因(?:是|为|:|：)?\s*([A-Za-z0-9_-]+)/i);
+            const targetGene = targetMatch ? targetMatch[1] : null;
+
+            let studyIntent = 'efficacy_exploration';
+            if (asksPricing) studyIntent = 'model_resource_inquiry';
+            if (hasGalnac) studyIntent = 'mechanism_validation';
+
+            const recommendedModel = hasDio
+                ? 'DIO肥胖猫'
+                : hasGalnac
+                    ? 'DIO肥胖猫 / 胰岛素抵抗猫（待靶点和组织取样可行性确认）'
+                    : mentionsDiabetes
+                        ? '需先区分肥胖伴代谢异常 vs 稳定临床糖尿病猫'
+                        : '待模型适配评估';
+
+            const missing = [];
+            if (hasGalnac && !targetGene) missing.push('靶基因未提供');
+            if (hasGalnac) missing.push('靶组织和 GalNAc 递送逻辑未确认');
+            if (mentionsDiabetes) missing.push('糖尿病诊断证据链未提供：持续高血糖、果糖胺、尿糖、临床症状');
+            if (asksPricing) missing.push('动物数量、表型数据、报价和 timeline 需要 Class B 内部执行材料');
+            if (!/剂量|dose/.test(text)) missing.push('剂量信息未提供');
+
+            const riskFlags = [];
+            if (hasGalnac && mentionsDiabetes) riskFlags.push('GalNAc 小核酸 + 单次给药不应直接写成糖尿病治疗药效，应优先定义为机制验证或早期 PD 验证。');
+            if (hasDio || mentionsWeight) riskFlags.push('DIO/肥胖模型不能自动等同于稳定临床糖尿病模型。');
+            if (asksPricing) riskFlags.push('缺少真实内部材料时，不得生成动物数量、报价、timeline 或 SOP 承诺。');
+
+            return {
+                raw_request: input,
+                local_rule_result: true,
+                fallback_reason: fallbackReason,
+                parsed_elements: {
+                    drug_type: hasGalnac ? 'GalNAc_siRNA' : 'other',
+                    target_gene: targetGene,
+                    target_indication: mentionsDiabetes ? '糖尿病/糖代谢异常' : mentionsWeight ? '肥胖/代谢异常' : null,
+                    study_intent: studyIntent,
+                    dosing_route: /皮下|subcutaneous|sc\b/i.test(input) ? '皮下注射' : null,
+                    dosing_regimen: /单次|single/i.test(input) ? '单次给药' : null
+                },
+                model_recommendation: {
+                    recommended: recommendedModel,
+                    reason: hasGalnac
+                        ? 'GalNAc 小核酸单次给药首先要验证靶基因 KD、PD 时间窗和靶组织可达性，再讨论代谢表型。'
+                        : '当前信息不足以支持正式实验方案，只能先做模型适配和材料澄清。',
+                    not_recommended: mentionsDiabetes ? '直接写成稳定临床糖尿病治疗模型' : '正式实验方案 / 报价承诺',
+                    not_recommended_reason: mentionsDiabetes
+                        ? '缺少稳定糖尿病诊断证据链，且 DIO/肥胖状态不能自动等同糖尿病。'
+                        : '缺少真实内部执行材料。'
+                },
+                endpoint_suggestions: {
+                    primary: hasGalnac ? ['靶基因 KD（RT-qPCR/蛋白表达，待靶组织确认）'] : ['待研究目的确认'],
+                    mechanism: ['靶组织表达', '下游通路标志物', 'PD 时间窗'],
+                    safety: ['体重', '摄食', '临床观察', '基础生化']
+                },
+                risk_flags: riskFlags,
+                missing_critical: missing,
+                clarification_questions: [
+                    hasGalnac ? '靶基因是什么？是否已有猫序列和引物/探针验证？' : '候选物类型和作用机制是什么？',
+                    '预期 claim 是机制验证、代谢药效探索、资源询价，还是正式糖尿病治疗评价？',
+                    '是否接受组织取样？目标组织是肝脏、脂肪、肌肉还是其他？',
+                    asksPricing ? '是否有可外发的动物数量、基线表型、报价和 timeline 权限？' : '是否已有 sponsor package、猫 PK/耐受性或非猫种属数据？'
+                ],
+                confidence: 'medium',
+                confidence_reason: `本地规则初步判断：${fallbackReason}。当前结果适合需求分流，不能直接作为外发正式方案。`,
+                evidence_sources: [],
+                study_direction_available: true
+            };
+        }
+        function renderPublicStudyDirection(result) {
+            const pe = getParsedElements(result);
+            const mr = result.model_recommendation || {};
+            const ep = result.endpoint_suggestions || {};
+            const missing = result.missing_critical || result.missing_fields || [];
+            const questions = result.clarification_questions || [];
+            const workflow = inferDecisionWorkflow(result);
+            const primaryEndpoints = publicList(ep.primary, ['靶基因 knockdown、血糖/果糖胺、体重/BCS 等需按研究目的确认']);
+            const mechanismEndpoints = publicList(ep.mechanism, ['靶组织、靶基因猫序列、KD 检测方法和 PD 时间窗需确认']);
+            const safetyEndpoints = publicList(ep.safety, ['临床观察、体重、基础生化等安全性观察需确认']);
+
+            document.getElementById('protocolSection').classList.remove('hidden');
+            document.getElementById('protocolContent').innerHTML = `
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <div class="font-semibold text-blue-900 mb-2">当前可判断</div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-blue-900">
+                        <div><span class="text-blue-600">研究目的:</span> ${WORKFLOW_LABELS.studyIntent[workflow.studyIntent] || publicValue(pe.study_intent)}</div>
+                        <div><span class="text-blue-600">建议输出:</span> ${WORKFLOW_LABELS.deliverableType[workflow.deliverableType] || workflow.deliverableType}</div>
+                        <div><span class="text-blue-600">药物类型:</span> ${publicValue(pe.drug_type)}</div>
+                        <div><span class="text-blue-600">推荐方向:</span> ${publicValue(mr.recommended, '先做模型适配评估')}</div>
+                    </div>
+                    ${mr.reason ? `<div class="mt-3 text-sm text-blue-800">${mr.reason}</div>` : ''}
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+                        <div class="font-semibold text-green-900 mb-2">建议先给客户</div>
+                        <div class="text-sm text-green-800 space-y-1">
+                            <div>• 模型适配评估</div>
+                            <div>• 需要补充资料清单</div>
+                            <div>• 可行性与风险边界说明</div>
+                        </div>
+                    </div>
+                    <div class="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                        <div class="font-semibold text-amber-900 mb-2">暂不直接承诺</div>
+                        <div class="text-sm text-amber-800 space-y-1">
+                            <div>• 动物数量和身体数据</div>
+                            <div>• 具体报价和排期</div>
+                            <div>• 正式实验方案和剂量推荐</div>
+                        </div>
+                    </div>
+                    <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                        <div class="font-semibold text-gray-900 mb-2">原因</div>
+                        <div class="text-sm text-gray-700">
+                            这些内容需要真实资源表、历史项目数据、SOP 或研究负责人确认。当前页面只输出初步判断，不补造内部数据。
+                        </div>
+                    </div>
+                </div>
+
+                <div class="border border-gray-200 rounded-lg overflow-hidden">
+                    <div class="bg-gray-100 px-4 py-2 font-semibold text-gray-700 border-b">建议关注的终点</div>
+                    <div class="p-4 grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+                        <div>
+                            <div class="font-medium text-blue-700 mb-1">主要终点</div>
+                            ${primaryEndpoints.map(item => `<div class="text-gray-700">• ${item}</div>`).join('')}
+                        </div>
+                        <div>
+                            <div class="font-medium text-purple-700 mb-1">机制终点</div>
+                            ${mechanismEndpoints.map(item => `<div class="text-gray-700">• ${item}</div>`).join('')}
+                        </div>
+                        <div>
+                            <div class="font-medium text-orange-700 mb-1">安全性观察</div>
+                            ${safetyEndpoints.map(item => `<div class="text-gray-700">• ${item}</div>`).join('')}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="border border-gray-200 rounded-lg overflow-hidden">
+                    <div class="bg-gray-100 px-4 py-2 font-semibold text-gray-700 border-b">需要补充的信息</div>
+                    <div class="p-4 space-y-2 text-sm">
+                        ${(missing.length > 0 ? missing : questions).slice(0, 8).map(item => `
+                            <div class="flex gap-2 text-gray-700">
+                                <span class="text-amber-500">•</span>
+                                <span>${item}</span>
+                            </div>
+                        `).join('') || '<div class="text-gray-500">暂无额外补充项。</div>'}
+                    </div>
+                </div>
+            `;
+        }
+
+        function scrollToEmail() {
+            document.getElementById('clarificationEmail')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        function updateResultsSummary(result) {
+            const pe = getParsedElements(result);
+            const missing = result.missing_critical || result.missing_fields || [];
+            const risks = result.risk_flags || [];
+
+            // Count identified vs pending fields
+            const fields = [pe.drug_type, pe.target_gene, pe.target_indication, pe.study_intent, pe.dosing_route, pe.dosing_regimen];
+            const identified = fields.filter(f => !isMissingValue(f)).length;
+            const pending = fields.length - identified + missing.length;
+
+            document.getElementById('summaryTitle').textContent = `已识别 ${identified} 项关键信息`;
+            document.getElementById('summaryStats').textContent = `${pending} 项待确认 · ${risks.length} 项风险提示`;
+        }
+
+        function displayResults(result) {
+            document.getElementById('resultsSection').classList.remove('hidden');
+
+            // Update summary first
+            updateResultsSummary(result);
+
+            // Parsed Elements - now from parsed_elements object
+            const pe = getParsedElements(result);
+            const elementsHtml = [
+                renderField('药物类型', friendlyLabel('drug_type', pe.drug_type) || pe.drug_type, 'drug_type'),
+                renderField('靶基因', pe.target_gene, 'target_gene'),
+                renderField('适应症/模型方向', pe.target_indication, 'target_indication'),
+                renderField('研究目的', friendlyLabel('study_intent', pe.study_intent) || pe.study_intent, 'study_intent'),
+                renderField('给药途径', pe.dosing_route, 'dosing_route'),
+                renderField('给药方式', pe.dosing_regimen, 'dosing_regimen')
+            ].join('');
+            document.getElementById('parsedElements').innerHTML = elementsHtml;
+
+            // Model Recommendation - NEW CRO-focused section
+            const mr = result.model_recommendation;
+            if (mr) {
+                const modelHtml = `
+                    <div class="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+                        <div class="font-semibold text-green-800 text-lg mb-2">✓ 推荐模型: ${publicValue(mr.recommended, '待评估')}</div>
+                        <div class="text-green-700 text-sm">${mr.reason || ''}</div>
+                    </div>
+                    ${mr.not_recommended ? `
+                    <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+                        <div class="font-semibold text-red-800 mb-2">✗ 不推荐: ${mr.not_recommended}</div>
+                        <div class="text-red-700 text-sm">${mr.not_recommended_reason || ''}</div>
+                    </div>` : ''}
+                `;
+                document.getElementById('parsedElements').innerHTML += `
+                    <div class="col-span-2 mt-4 pt-4 border-t border-gray-200">
+                        <h3 class="font-semibold text-gray-700 mb-3">模型适配评估</h3>
+                        ${modelHtml}
+                    </div>
+                `;
+            }
+
+            // Endpoint Suggestions - NEW
+            const ep = result.endpoint_suggestions;
+            if (ep) {
+                const endpointHtml = `
+                    <div class="col-span-2 mt-4 pt-4 border-t border-gray-200">
+                        <h3 class="font-semibold text-gray-700 mb-3">终点建议</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            <div class="bg-blue-50 p-3 rounded">
+                                <div class="text-xs text-blue-600 font-semibold mb-1">主要终点</div>
+                                <div class="text-sm">${publicList(ep.primary, ['待确认']).join(', ')}</div>
+                            </div>
+                            <div class="bg-purple-50 p-3 rounded">
+                                <div class="text-xs text-purple-600 font-semibold mb-1">机制终点</div>
+                                <div class="text-sm">${publicList(ep.mechanism, ['待确认']).join(', ')}</div>
+                            </div>
+                            <div class="bg-orange-50 p-3 rounded">
+                                <div class="text-xs text-orange-600 font-semibold mb-1">安全性终点</div>
+                                <div class="text-sm">${publicList(ep.safety, ['待确认']).join(', ')}</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                document.getElementById('parsedElements').innerHTML += endpointHtml;
+            }
+
+            // Decision workflow and expert cross-checks are deterministic fallbacks.
+            // They must render even when the model response omits these newer fields.
+            renderDecisionWorkflow(result);
+            renderInternationalExpertCheck(result);
+            renderDomesticExpertCheck(result);
+
+            // Risk Flags + Missing Critical
+            const risks = result.risk_flags || [];
+            const missing = result.missing_critical || result.missing_fields || [];
+            const allGaps = [...risks.map(r => ({type: 'risk', text: r})), ...missing.map(m => ({type: 'missing', text: m}))];
+
+            const gapsHtml = allGaps.length > 0 ? allGaps.map(gap => `
+                <div class="gap-flag p-3 rounded flex items-start gap-2">
+                    <span class="${gap.type === 'risk' ? 'text-red-500' : 'text-amber-500'}">${gap.type === 'risk' ? '⚠️' : '❓'}</span>
+                    <span class="${gap.type === 'risk' ? 'text-red-700' : 'text-amber-700'}">${gap.text}</span>
+                </div>
+            `).join('') : '<p class="text-gray-500">当前没有识别到额外风险或缺口</p>';
+            document.getElementById('gapFlags').innerHTML = gapsHtml;
+
+            // Confidence indicator
+            if (result.confidence) {
+                const confStyles = {
+                    high: 'bg-green-100 text-green-700',
+                    medium: 'bg-yellow-100 text-yellow-700',
+                    low: 'bg-red-100 text-red-700'
+                };
+                const confStyle = confStyles[result.confidence] || confStyles.medium;
+                const confidenceLabel = { high: '高', medium: '中', low: '低' }[result.confidence] || result.confidence;
+                document.getElementById('gapFlags').innerHTML += `
+                    <div class="mt-4 p-3 bg-gray-50 rounded flex items-center justify-between">
+                        <span class="text-sm text-gray-600">判断完整度</span>
+                        <span class="px-3 py-1 rounded-full text-sm font-medium ${confStyle}">${confidenceLabel}</span>
+                    </div>
+                    ${result.confidence_reason ? `<div class="text-xs text-gray-500 mt-1">${result.confidence_reason}</div>` : ''}
+                `;
+            }
+
+            // Clarification Email
+            const email = generateEmail(result);
+            document.getElementById('clarificationEmail').textContent = email;
+
+            // Evidence Sources - with accessible links
+            if (result.evidence_sources && result.evidence_sources.length > 0) {
+                document.getElementById('referencesSection').classList.remove('hidden');
+                const evidenceHtml = result.evidence_sources.map(ev => `
+                    <div class="p-3 bg-gray-50 rounded border-l-4 border-blue-400">
+                        <div class="text-sm font-medium text-gray-800 mb-1">${ev.claim}</div>
+                        <div class="text-sm text-gray-700">
+                            ${ev.authors || ''} ${ev.year ? `(${ev.year})` : ''}.
+                            <span class="italic">${ev.title || ''}</span>
+                        </div>
+                        <div class="flex items-center gap-2 mt-2">
+                            <span class="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">${ev.source_type || 'reference'}</span>
+                            ${ev.url ? `<a href="${ev.url}" target="_blank" class="text-xs text-blue-600 hover:underline flex items-center gap-1">
+                                <span>查看原文</span>
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                            </a>` : '<span class="text-xs text-red-500">无链接</span>'}
+                        </div>
+                        ${ev.relevance ? `<div class="text-xs text-gray-500 mt-1">关联: ${ev.relevance}</div>` : ''}
+                    </div>
+                `).join('');
+                document.getElementById('referenceSources').innerHTML = evidenceHtml;
+            } else {
+                document.getElementById('referencesSection').classList.add('hidden');
+            }
+
+            if (result.study_direction_available || result.local_rule_result) {
+                renderPublicStudyDirection(result);
+            } else {
+                document.getElementById('protocolSection').classList.add('hidden');
+            }
+
+        }
+
+        function renderField(label, value, key) {
+            const isEmpty = isMissingValue(value);
+            return `
+                <div class="p-3 bg-gray-50 rounded ${isEmpty ? 'border-l-3 border-red-400' : ''}">
+                    <div class="text-xs text-gray-500 uppercase tracking-wide">${label}</div>
+                    <div class="mt-1 ${isEmpty ? 'text-red-500 italic' : 'text-gray-800 font-medium'}">
+                        ${publicValue(value)}
+                    </div>
+                </div>
+            `;
+        }
+
+        function generateEmail(result) {
+            const questions = result.clarification_questions || [];
+            const missing = result.missing_critical || result.missing_fields || [];
+            const pe = result.parsed_elements || result;
+            const mr = result.model_recommendation || {};
+
+            return `Subject: 猫代谢疾病研究咨询 - 需要确认几个问题
+
+尊敬的客户，
+
+感谢您对我们猫代谢疾病研究服务的关注。
+
+根据您的需求描述，我们初步判断：
+- 药物类型: ${pe.drug_type || '待确认'}
+- 研究目的: ${pe.study_intent || '待确认'}
+- 推荐模型: ${mr.recommended || '待评估'}
+
+为了给您提供更准确的研究方案，我们需要确认以下信息：
+
+${questions.map((q, i) => `${i + 1}. ${q}`).join('\n')}
+${missing.length > 0 ? `
+另外，以下信息对方案设计至关重要：
+${missing.map(m => `- ${m}`).join('\n')}` : ''}
+
+期待您的回复。
+
+此致
+研究设计团队`;
+        }
+
+        async function copyEmail() {
+            const email = document.getElementById('clarificationEmail').textContent;
+            try {
+                await navigator.clipboard.writeText(email);
+                showToast('沟通内容已复制');
+            } catch (e) {
+                showToast('复制失败，请手动选择复制', true);
+            }
+        }
+
+        async function copyProtocol() {
+            if (!currentResult) return;
+            const publicText = document.getElementById('protocolContent')?.innerText || '';
+            try {
+                await navigator.clipboard.writeText(publicText.trim());
+                showToast('初步研究建议已复制');
+            } catch (e) {
+                showToast('复制失败，请手动选择复制', true);
+            }
+        }
+
+        // History
+        function saveToHistory(input, result) {
+            const pe = getParsedElements(result);
+            const missing = result.missing_critical || result.missing_fields || [];
+            const entry = {
+                id: Date.now(),
+                timestamp: new Date().toISOString(),
+                input: input.substring(0, 100) + (input.length > 100 ? '...' : ''),
+                drug_type: pe.drug_type,
+                study_intent: pe.study_intent,
+                gaps: missing.length
+            };
+            parseHistory.unshift(entry);
+            if (parseHistory.length > 20) parseHistory = parseHistory.slice(0, 20);
+            localStorage.setItem('intakeParser_history', JSON.stringify(parseHistory));
+            renderHistory();
+        }
+
+        function renderHistory() {
+            if (parseHistory.length === 0) {
+                document.getElementById('historyList').innerHTML = '<p class="text-gray-400 text-sm">暂无评估记录</p>';
+                return;
+            }
+
+            const html = parseHistory.map(h => `
+                <div class="p-3 bg-gray-50 rounded flex justify-between items-start">
+                    <div>
+                        <div class="text-sm font-medium text-gray-800">${h.input}</div>
+                        <div class="text-xs text-gray-500 mt-1">
+                            ${publicValue(h.drug_type)} | ${publicValue(h.study_intent)} | ${h.gaps} 项需确认
+                        </div>
+                    </div>
+                    <div class="text-xs text-gray-400">${new Date(h.timestamp).toLocaleDateString()}</div>
+                </div>
+            `).join('');
+            document.getElementById('historyList').innerHTML = html;
+        }
+
+        function clearHistory() {
+            if (confirm('确认清空所有评估记录？')) {
+                parseHistory = [];
+                localStorage.setItem('intakeParser_history', JSON.stringify(parseHistory));
+                renderHistory();
+                showToast('记录已清空');
+            }
+        }
+
+        // Utilities
+        // UI Controls
+        function toggleServiceInfo() {
+            const content = document.getElementById('serviceInfoContent');
+            const toggle = document.getElementById('serviceInfoToggle');
+            const isHidden = content.classList.contains('hidden');
+            content.classList.toggle('hidden');
+            toggle.textContent = isHidden ? '▲' : '▼';
+        }
+
+        function clearInput() {
+            document.getElementById('requestInput').value = '';
+            document.getElementById('resultsSection').classList.add('hidden');
+            currentResult = null;
+        }
+
+        function loadExample() {
+            document.getElementById('requestInput').value = `我们的需求是猫咪的糖尿病模型。药物类型：GalNAc小核酸类；靶基因：ANGPTL3；给药方案：皮下注射；给药剂量：待定。先按单次给药。请同时说明 DIO 肥胖猫资源、动物身体数据和粗略报价能否提供。`;
+        }
+
+        // Initialize
+        renderHistory();
+    </script>
+</body>
+</html>

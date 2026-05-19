@@ -1,0 +1,125 @@
+{
+  "version": "1.4",
+  "exportedAt": "2026-05-12T00:00:00.000Z",
+  "intakes": [
+    {
+      "id": "INTAKE-2026-05-12-001",
+      "createdAt": "2026-05-12T10:00:00.000Z",
+      "question": "我们的需求是猫咪的糖尿病模型。药物类型：GalNAc小核酸类、给药方案：皮下注射、给药剂量：待定。先按单次给药。",
+      "sourceStatus": "internal-draft",
+      "permissionStatus": "internal-only",
+      "candidateType": "GalNAc-conjugated oligonucleotide (小核酸类)",
+      "route": "皮下注射",
+      "target": "",
+      "axisA": "metabolic-abnormality",
+      "axisB": "mechanism-validation",
+      "studyIntent": "mechanism-validation",
+      "domainRoute": "preclinical-study-design",
+      "deliverableType": "model-fit-assessment",
+      "reviewGates": {
+        "scientific": false,
+        "bd": false,
+        "resource": false,
+        "pricing": false,
+        "qa": false
+      },
+      "materials": {
+        "sponsorPackage": false,
+        "dioFeasibility": false,
+        "sampleAssay": false,
+        "statistics": false,
+        "expertReview": false,
+        "pricing": false,
+        "welfare": false
+      },
+      "outputLevel": "L1",
+      "notes": "GalNAc单次给药设计方向是机制验证，不应默认归类为糖尿病治疗。需要确认靶点基因和预期claim。",
+      "ruleUpdate": "当客户说 GalNAc 小核酸 + 猫糖尿病 + 单次给药时，优先路由到机制验证和 Model Fit Assessment，不得默认生成糖尿病治疗 protocol。"
+    },
+    {
+      "id": "INTAKE-2026-05-12-002",
+      "createdAt": "2026-05-12T10:30:00.000Z",
+      "question": "请提供饮食诱导猫肥胖模型信息，包括现有模型动物数量，模型动物身体情况数据，动物报价，药效评价粗略报价。",
+      "sourceStatus": "internal-draft",
+      "permissionStatus": "internal-only",
+      "candidateType": "",
+      "route": "",
+      "target": "",
+      "axisA": "dio",
+      "axisB": "model-resource",
+      "studyIntent": "model-resource-inquiry",
+      "domainRoute": "efficacy-model-evaluation",
+      "deliverableType": "clarification-email",
+      "reviewGates": {
+        "scientific": false,
+        "bd": false,
+        "resource": false,
+        "pricing": false,
+        "qa": false
+      },
+      "materials": {
+        "sponsorPackage": false,
+        "dioFeasibility": false,
+        "sampleAssay": false,
+        "statistics": false,
+        "expertReview": false,
+        "pricing": false,
+        "welfare": false
+      },
+      "outputLevel": "L1",
+      "notes": "所有请求的数据（动物数量、表型、报价）均为Class B内部执行材料，需要真实数据，不能编造。",
+      "ruleUpdate": "当客户要求 DIO 动物数量、身体数据或报价时，第一交付物应是澄清邮件和内部材料请求，不得生成估算数量、价格或 timeline。"
+    }
+  ],
+  "materials": {},
+  "experts": [
+    {
+      "id": "1",
+      "role": "主笔专家",
+      "name": "Lisa Freeman",
+      "credentials": "DVM, PhD, DACVIM (Nutrition)",
+      "responsibilities": "科学分类、肥胖/营养/代谢模型边界、BCS/MCS、终点分层",
+      "verified": false
+    },
+    {
+      "id": "2",
+      "role": "内分泌顾问",
+      "name": "Stijn Niessen",
+      "credentials": "DVM, PhD, DECVIM-CA",
+      "responsibilities": "猫糖尿病、胰岛素抵抗、糖代谢终点、避免肥胖误写成糖尿病",
+      "verified": false
+    },
+    {
+      "id": "3",
+      "role": "转化药效顾问",
+      "name": "待确定",
+      "credentials": "Oligonucleotide / GalNAc siRNA 经验",
+      "responsibilities": "靶组织、PK/PD、单次给药窗口、KD终点、RT-qPCR",
+      "verified": false
+    },
+    {
+      "id": "4",
+      "role": "国内总框架/营养肥胖专家",
+      "name": "夏兆飞｜中国农业大学动物医学院",
+      "credentials": "中国兽医协会兽医临床营养（小动物）专科委员会主任委员",
+      "responsibilities": "DIO 模型分类、BCS/MCS、营养干预、国内 CRO 可接受表达",
+      "verified": false
+    },
+    {
+      "id": "5",
+      "role": "国内内分泌/实验室诊断专家",
+      "name": "王姜维｜上海蓝石宠物医院",
+      "credentials": "中国兽医协会小动物相关专科医师，内分泌与实验室诊断方向",
+      "responsibilities": "糖尿病模型边界、血糖/果糖胺/胰岛素解读、临床症状证据链",
+      "verified": false
+    },
+    {
+      "id": "6",
+      "role": "国内 GalNAc/siRNA 转化药理专家",
+      "name": "梁子才｜瑞博生物",
+      "credentials": "小核酸药物研发与 GalNAc 递送平台经验",
+      "responsibilities": "GalNAc 递送、靶基因 KD、PK/PD、跨物种转化边界",
+      "verified": false
+    }
+  ]
+}

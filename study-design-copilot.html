@@ -1,0 +1,2762 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Study Design Copilot — 内部版</title>
+    <style>
+        :root {
+            --primary: #1a1a2e;
+            --primary-light: #16213e;
+            --accent: #4a90d9;
+            --success: #4caf50;
+            --warning: #ff9800;
+            --danger: #f44336;
+            --bg: #f5f5f5;
+            --card: #ffffff;
+            --text: #333333;
+            --text-light: #666666;
+            --border: #e0e0e0;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+        }
+
+        /* Layout */
+        .app {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            width: 260px;
+            background: var(--primary);
+            color: white;
+            padding: 20px;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+        }
+
+        .main {
+            flex: 1;
+            margin-left: 260px;
+            padding: 24px;
+        }
+
+        /* Sidebar */
+        .logo {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .logo-sub {
+            font-size: 12px;
+            opacity: 0.7;
+            margin-bottom: 24px;
+        }
+
+        .nav-section {
+            margin-bottom: 24px;
+        }
+
+        .nav-title {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            opacity: 0.5;
+            margin-bottom: 12px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-bottom: 4px;
+            transition: background 0.2s;
+        }
+
+        .nav-item:hover {
+            background: rgba(255,255,255,0.1);
+        }
+
+        .nav-item.active {
+            background: var(--accent);
+        }
+
+        .nav-icon {
+            font-size: 16px;
+        }
+
+        .intake-list {
+            margin-top: 12px;
+        }
+
+        .intake-item {
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            margin-bottom: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .intake-item:hover {
+            background: rgba(255,255,255,0.1);
+        }
+
+        .intake-item.active {
+            background: rgba(255,255,255,0.15);
+        }
+
+        .level-tag {
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+
+        .level-l0 { background: var(--danger); }
+        .level-l1 { background: var(--warning); }
+        .level-l2 { background: var(--success); }
+
+        /* Main Content */
+        .page {
+            display: none;
+        }
+
+        .page.active {
+            display: block;
+        }
+
+        .page-header {
+            margin-bottom: 24px;
+        }
+
+        .page-title {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .page-desc {
+            color: var(--text-light);
+        }
+
+        /* Cards */
+        .card {
+            background: var(--card);
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            margin-bottom: 24px;
+        }
+
+        .card-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+            font-weight: 600;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .card-body {
+            padding: 20px;
+        }
+
+        /* Forms */
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            font-weight: 500;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .form-label .required {
+            color: var(--danger);
+        }
+
+        .form-input, .form-select, .form-textarea {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.2s;
+        }
+
+        .form-input:focus, .form-select:focus, .form-textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .form-textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .form-hint {
+            font-size: 12px;
+            color: var(--text-light);
+            margin-top: 6px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-light);
+        }
+
+        .btn-secondary {
+            background: var(--border);
+            color: var(--text);
+        }
+
+        .btn-secondary:hover {
+            background: #d0d0d0;
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 12px;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+        }
+
+        /* Classification */
+        .axis-section {
+            margin-bottom: 24px;
+        }
+
+        .axis-title {
+            font-weight: 600;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .axis-options {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+
+        .axis-option {
+            padding: 16px;
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .axis-option:hover {
+            border-color: var(--accent);
+        }
+
+        .axis-option.selected {
+            border-color: var(--accent);
+            background: rgba(74, 144, 217, 0.08);
+        }
+
+        .axis-option-title {
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .axis-option-desc {
+            font-size: 13px;
+            color: var(--text-light);
+        }
+
+        /* Material Checklist */
+        .material-group {
+            margin-bottom: 24px;
+        }
+
+        .material-group-title {
+            font-weight: 600;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .material-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 12px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .material-item:last-child {
+            border-bottom: none;
+        }
+
+        .material-checkbox {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+
+        .material-info {
+            flex: 1;
+        }
+
+        .material-name {
+            font-weight: 500;
+        }
+
+        .material-desc {
+            font-size: 13px;
+            color: var(--text-light);
+        }
+
+        .material-status {
+            font-size: 12px;
+            padding: 4px 10px;
+            border-radius: 20px;
+        }
+
+        .status-provided {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .status-missing {
+            background: #ffebee;
+            color: #c62828;
+        }
+
+        /* Output Level */
+        .output-level {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .level-card {
+            flex: 1;
+            padding: 20px;
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            text-align: center;
+            opacity: 0.5;
+        }
+
+        .level-card.current {
+            border-color: var(--accent);
+            background: rgba(74, 144, 217, 0.08);
+            opacity: 1;
+        }
+
+        .level-card.achieved {
+            border-color: var(--success);
+            background: rgba(76, 175, 80, 0.08);
+            opacity: 1;
+        }
+
+        .level-name {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .level-desc {
+            font-size: 13px;
+            color: var(--text-light);
+        }
+
+        /* Memo Output */
+        .memo-output {
+            background: #f8f9fa;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 20px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 13px;
+            white-space: pre-wrap;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        /* Alert */
+        .alert {
+            padding: 16px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+        }
+
+        .alert-warning {
+            background: #fff3e0;
+            border: 1px solid #ff9800;
+        }
+
+        .alert-danger {
+            background: #ffebee;
+            border: 1px solid #f44336;
+        }
+
+        .alert-info {
+            background: #e3f2fd;
+            border: 1px solid #2196f3;
+        }
+
+        .alert-icon {
+            font-size: 20px;
+        }
+
+        /* Stats */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            background: var(--card);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        .stat-value {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .stat-label {
+            font-size: 13px;
+            color: var(--text-light);
+        }
+
+        .module-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 14px;
+        }
+
+        .module-card {
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 14px;
+            background: #ffffff;
+        }
+
+        .module-title {
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+
+        .module-desc {
+            font-size: 13px;
+            color: var(--text-light);
+            min-height: 42px;
+        }
+
+        .module-status {
+            display: inline-flex;
+            margin-top: 10px;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .module-status.ready {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .module-status.manual {
+            background: #fff3e0;
+            color: #ef6c00;
+        }
+
+        .module-status.blocked {
+            background: #ffebee;
+            color: #c62828;
+        }
+
+        .workflow-strip {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 10px;
+        }
+
+        .workflow-step {
+            border: 1px solid var(--border);
+            border-left: 4px solid var(--accent);
+            border-radius: 8px;
+            padding: 12px;
+            background: #fafafa;
+        }
+
+        .workflow-step-title {
+            font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 6px;
+        }
+
+        .workflow-step-desc {
+            font-size: 12px;
+            color: var(--text-light);
+        }
+
+        .decision-panel {
+            display: grid;
+            grid-template-columns: 1.2fr 1fr;
+            gap: 16px;
+        }
+
+        .decision-list {
+            margin: 0;
+            padding-left: 18px;
+            color: var(--text);
+            font-size: 14px;
+        }
+
+        .decision-list li {
+            margin-bottom: 8px;
+        }
+
+        /* Table */
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .table th, .table td {
+            padding: 12px 16px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            font-size: 13px;
+        }
+
+        /* Hidden */
+        .hidden {
+            display: none !important;
+        }
+
+        /* No-fake-data banner */
+        .no-fake-banner {
+            background: linear-gradient(135deg, #c62828 0%, #d32f2f 100%);
+            color: white;
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 13px;
+        }
+
+        /* Empty state */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-light);
+        }
+
+        .empty-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .sidebar {
+                width: 200px;
+            }
+            .main {
+                margin-left: 200px;
+            }
+            .form-row, .axis-options {
+                grid-template-columns: 1fr;
+            }
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .module-grid, .workflow-strip, .decision-panel {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="no-fake-banner">
+        <span>⚠️</span>
+        <span><strong>No-Fake-Data 规则生效</strong> — 不允许编造动物数量、报价、timeline、SOP。缺失材料必须标注 "Not provided"。</span>
+    </div>
+
+    <div class="app">
+        <aside class="sidebar">
+            <div class="logo">Study Design Copilot</div>
+            <div class="logo-sub">内部版 v1.4</div>
+
+            <div class="nav-section">
+                <div class="nav-title">导航</div>
+                <div class="nav-item active" data-page="dashboard">
+                    <span class="nav-icon">📊</span>
+                    <span>状态看板</span>
+                </div>
+                <div class="nav-item" data-page="new-intake">
+                    <span class="nav-icon">➕</span>
+                    <span>新建 Intake</span>
+                </div>
+                <div class="nav-item" data-page="materials">
+                    <span class="nav-icon">📦</span>
+                    <span>材料收集</span>
+                </div>
+                <div class="nav-item" data-page="experts">
+                    <span class="nav-icon">👨‍🔬</span>
+                    <span>专家管理</span>
+                </div>
+                <div class="nav-item" data-page="messages">
+                    <span class="nav-icon">📨</span>
+                    <span>请求消息</span>
+                </div>
+            </div>
+
+            <div class="nav-section">
+                <div class="nav-title">Intake 记录</div>
+                <div id="intakeList" class="intake-list">
+                    <div class="empty-state" style="padding: 20px 0; font-size: 13px;">
+                        暂无记录
+                    </div>
+                </div>
+            </div>
+
+            <div class="nav-section" style="margin-top: auto; padding-top: 24px; border-top: 1px solid rgba(255,255,255,0.1);">
+                <div class="nav-item" onclick="exportAllData()">
+                    <span class="nav-icon">📥</span>
+                    <span>导出数据</span>
+                </div>
+                <div class="nav-item" onclick="importData()">
+                    <span class="nav-icon">📤</span>
+                    <span>导入数据</span>
+                </div>
+            </div>
+        </aside>
+
+        <main class="main">
+            <!-- Dashboard Page -->
+            <div id="page-dashboard" class="page active">
+                <div class="page-header">
+                    <h1 class="page-title">状态看板</h1>
+                    <p class="page-desc">Feline Metabolic Disease Study Design Workflow</p>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value" id="stat-total">0</div>
+                        <div class="stat-label">总 Intake 数</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="stat-l0">0</div>
+                        <div class="stat-label">L0 待处理</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="stat-l1">0</div>
+                        <div class="stat-label">L1 内部分流</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="stat-l2">0</div>
+                        <div class="stat-label">L2+ 可外发</div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <span>项目进展总览</span>
+                        <span style="font-size: 12px; color: var(--text-light);">当前阶段：L0/L1 内部工作流验证</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="workflow-strip">
+                            <div class="workflow-step">
+                                <div class="workflow-step-title">1. 需求进入</div>
+                                <div class="workflow-step-desc">记录来源、权限、候选物、原始问题。没有来源就不外发。</div>
+                            </div>
+                            <div class="workflow-step">
+                                <div class="workflow-step-title">2. 双轴分类</div>
+                                <div class="workflow-step-desc">先分科学状态，再分 CRO 交付类型，避免把 DIO 写成糖尿病治疗。</div>
+                            </div>
+                            <div class="workflow-step">
+                                <div class="workflow-step-title">3. 材料检查</div>
+                                <div class="workflow-step-desc">P0/P1 材料决定输出层级。缺失材料继续标为 Not provided。</div>
+                            </div>
+                            <div class="workflow-step">
+                                <div class="workflow-step-title">4. 专家审核</div>
+                                <div class="workflow-step-desc">专家参考可支持分类和语言边界，不能替代 SOP 或执行证据。</div>
+                            </div>
+                            <div class="workflow-step">
+                                <div class="workflow-step-title">5. 输出控制</div>
+                                <div class="workflow-step-desc">当前可生成 intake、model-fit、请求消息和 memo 骨架，不生成报价。</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <span>流程模块状态</span>
+                        <button class="btn btn-primary btn-sm" onclick="showPage('new-intake')">新建 Intake</button>
+                    </div>
+                    <div class="card-body">
+                        <div class="module-grid">
+                            <div class="module-card">
+                                <div class="module-title">Sponsor 需求评估</div>
+                                <div class="module-desc">录入 sponsor 问题、来源权限、候选物信息和分类注释。</div>
+                                <span class="module-status ready">可用</span>
+                            </div>
+                            <div class="module-card">
+                                <div class="module-title">临床前研究路径</div>
+                                <div class="module-desc">已手动跑 GalNAc、DIO、GLP-1 三个样本，等待批准固化。</div>
+                                <span class="module-status manual">样本完成</span>
+                            </div>
+                            <div class="module-card">
+                                <div class="module-title">临床执行流程</div>
+                                <div class="module-desc">已手动跑糖尿病治疗、SGLT2、缓解终点三个样本。</div>
+                                <span class="module-status manual">样本完成</span>
+                            </div>
+                            <div class="module-card">
+                                <div class="module-title">材料与证据管理</div>
+                                <div class="module-desc">P0/P1 材料追踪、模板、缺口提示和收集进度已可用。</div>
+                                <span class="module-status ready">可用</span>
+                            </div>
+                            <div class="module-card">
+                                <div class="module-title">专家审核路由</div>
+                                <div class="module-desc">专家档案和审核任务可记录，但真实验证和授权仍未提供。</div>
+                                <span class="module-status manual">待真实审核</span>
+                            </div>
+                            <div class="module-card">
+                                <div class="module-title">外发与报价控制</div>
+                                <div class="module-desc">没有 Class B 执行证据前，不生成动物数量、报价、timeline、protocol。</div>
+                                <span class="module-status blocked">未开放</span>
+                            </div>
+                            <div class="module-card">
+                                <div class="module-title">项目边界：cat-baseline-lims</div>
+                                <div class="module-desc">动物档案、样本库存、病原检测、种群遗传和设施运营属于单独 LIMS 项目。</div>
+                                <span class="module-status blocked">不混入</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">下一步决策</div>
+                    <div class="card-body">
+                        <div class="decision-panel">
+                            <div>
+                                <p style="margin-bottom: 12px; color: var(--text-light);">
+                                    这组参考图确认了当前产品应该走“内部流程管控系统”，不是单页问答工具。下一步不是补更多漂亮页面，而是把重复流程固化。
+                                </p>
+                                <ul class="decision-list">
+                                    <li>审阅 `manual-sample-run-two-track-2026-05-13.md` 的 6 个手动样本。</li>
+                                    <li>批准后创建两个技能：`feline-preclinical-route` 和 `feline-clinical-execution-route`。</li>
+                                    <li>只有出现定时巡检需求时，才先写脚本、跑 3-10 个样本，再设置 cron。</li>
+                                    <li>`cat-baseline-lims` 作为单独系统处理，不能把动物档案、样本、病原检测或种群遗传模块塞进当前工具。</li>
+                                </ul>
+                            </div>
+                            <div class="alert alert-warning" style="margin-bottom: 0;">
+                                <span class="alert-icon">⚠️</span>
+                                <div>
+                                    <strong>仍然不能外发</strong><br>
+                                    真实 SOP、动物来源、表型数据、检测验证、统计、福利、报价和专家批准仍未提供。当前工具只支持内部 L0/L1 分流。
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <span>最近 Intake</span>
+                        <button class="btn btn-primary btn-sm" onclick="showPage('new-intake')">➕ 新建</button>
+                    </div>
+                    <div class="card-body" id="recentIntakes">
+                        <div class="empty-state">
+                            <div class="empty-icon">📋</div>
+                            <p>暂无 Intake 记录</p>
+                            <button class="btn btn-primary" style="margin-top: 16px;" onclick="showPage('new-intake')">创建第一个 Intake</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- New Intake Page -->
+            <div id="page-new-intake" class="page">
+                <div class="page-header">
+                    <h1 class="page-title">新建 Intake</h1>
+                    <p class="page-desc">录入 Sponsor 问题或内部需求</p>
+                </div>
+
+                <form id="intakeForm" onsubmit="saveIntake(event)">
+                    <!-- Step 1: Basic Info -->
+                    <div class="card">
+                        <div class="card-header">Step 1: 基本信息</div>
+                        <div class="card-body">
+                            <div class="form-group">
+                                <label class="form-label">问题/需求描述 <span class="required">*</span></label>
+                                <textarea class="form-textarea" id="question" required placeholder="请输入 sponsor 问题或内部需求的原文..."></textarea>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label">来源状态</label>
+                                    <select class="form-select" id="sourceStatus">
+                                        <option value="">请选择</option>
+                                        <option value="sponsor-provided">真实 sponsor 提供</option>
+                                        <option value="meeting-note">会议记录</option>
+                                        <option value="internal-draft">内部草稿</option>
+                                        <option value="hypothetical">假设性测试场景</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">权限状态</label>
+                                    <select class="form-select" id="permissionStatus">
+                                        <option value="">请选择</option>
+                                        <option value="internal-only">仅内部使用</option>
+                                        <option value="sponsor-cleared">Sponsor 已授权</option>
+                                        <option value="external-cleared">可外发</option>
+                                        <option value="needs-confirmation">需法务/Sponsor 确认</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label">候选物/干预类型</label>
+                                    <input class="form-input" id="candidateType" placeholder="如：GLP-1 RA, GalNAc siRNA, Diet...">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">给药途径</label>
+                                    <input class="form-input" id="route" placeholder="如：皮下注射、口服、饮食...">
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">靶点/机制</label>
+                                <input class="form-input" id="target" placeholder="如：GLP-1R, PCSK9, ANGPTL3...">
+                                <div class="form-hint">如果不知道，请留空并标注为需要向 sponsor 确认</div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">分类注释</label>
+                                <textarea class="form-textarea" id="notes" placeholder="记录分类决策的关键考量、边界提醒、需要确认的问题..." style="min-height: 60px;"></textarea>
+                                <div class="form-hint">内部注释，用于记录分类边界和待确认事项</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 2: Classification -->
+                    <div class="card">
+                        <div class="card-header">Step 2: 双轴分类</div>
+                        <div class="card-body">
+                            <div class="axis-section">
+                                <div class="axis-title">
+                                    <span>🔬</span>
+                                    <span>Axis A: 科学疾病/代谢状态</span>
+                                </div>
+                                <div class="axis-options" id="axisA">
+                                    <div class="axis-option" data-value="normal">
+                                        <div class="axis-option-title">正常代谢猫</div>
+                                        <div class="axis-option-desc">无肥胖/糖代谢异常表型</div>
+                                    </div>
+                                    <div class="axis-option" data-value="overweight">
+                                        <div class="axis-option-title">超重/肥胖猫</div>
+                                        <div class="axis-option-desc">超重或肥胖表型，需指定来源和标准</div>
+                                    </div>
+                                    <div class="axis-option" data-value="dio">
+                                        <div class="axis-option-title">DIO 肥胖猫</div>
+                                        <div class="axis-option-desc">饮食诱导肥胖群体（需 SOP 和群体证据）</div>
+                                    </div>
+                                    <div class="axis-option" data-value="metabolic-abnormality">
+                                        <div class="axis-option-title">肥胖伴代谢异常</div>
+                                        <div class="axis-option-desc">肥胖 + 胰岛素抵抗/糖代谢异常</div>
+                                    </div>
+                                    <div class="axis-option" data-value="at-risk">
+                                        <div class="axis-option-title">糖尿病高风险猫</div>
+                                        <div class="axis-option-desc">高风险但未确诊稳定糖尿病</div>
+                                    </div>
+                                    <div class="axis-option" data-value="stable-diabetes">
+                                        <div class="axis-option-title">稳定临床糖尿病猫</div>
+                                        <div class="axis-option-desc">已确诊并稳定的糖尿病状态</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="axis-section">
+                                <div class="axis-title">
+                                    <span>🏢</span>
+                                    <span>Axis B: CRO 业务交付类型</span>
+                                </div>
+                                <div class="axis-options" id="axisB">
+                                    <div class="axis-option" data-value="model-resource">
+                                        <div class="axis-option-title">模型资源供应</div>
+                                        <div class="axis-option-desc">动物/群体可用性、基本表型、物流</div>
+                                    </div>
+                                    <div class="axis-option" data-value="model-fit">
+                                        <div class="axis-option-title">模型适配评估</div>
+                                        <div class="axis-option-desc">模型是否匹配候选物和 claim</div>
+                                    </div>
+                                    <div class="axis-option" data-value="mechanism-validation">
+                                        <div class="axis-option-title">早期机制验证</div>
+                                        <div class="axis-option-desc">靶点结合、组织取样、qPCR/生物标志物</div>
+                                    </div>
+                                    <div class="axis-option" data-value="metabolic-efficacy">
+                                        <div class="axis-option-title">代谢药效探索</div>
+                                        <div class="axis-option-desc">体重、BCS、摄食、糖代谢指标</div>
+                                    </div>
+                                    <div class="axis-option" data-value="diabetes-treatment">
+                                        <div class="axis-option-title">糖尿病治疗评价</div>
+                                        <div class="axis-option-desc">确诊糖尿病猫的治疗效果</div>
+                                    </div>
+                                    <div class="axis-option" data-value="nutrition">
+                                        <div class="axis-option-title">营养/宠物食品评价</div>
+                                        <div class="axis-option-desc">饮食、饱腹感、体况管理</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 2.5: Decision Workflow -->
+                    <div class="card">
+                        <div class="card-header">Step 2.5: 业务路由与交付物判断</div>
+                        <div class="card-body">
+                            <div class="alert alert-info">
+                                <span class="alert-icon">ℹ️</span>
+                                <div>
+                                    <strong>从 Intake 升级到 Decision Workflow</strong><br>
+                                    这里决定这条需求先进入哪条 CRO 业务线、研究目的是什么、第一份交付物应该到什么层级。不是每条需求都应该直接生成 protocol。
+                                </div>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label">Study Intent</label>
+                                    <select class="form-select" id="studyIntent">
+                                        <option value="auto">自动判断</option>
+                                        <option value="mechanism-validation">机制验证</option>
+                                        <option value="efficacy-exploration">药效探索</option>
+                                        <option value="dose-exploration">剂量探索</option>
+                                        <option value="pkpd">PK/PD</option>
+                                        <option value="toxicology-safety">毒理/安评</option>
+                                        <option value="model-resource-inquiry">模型资源询价</option>
+                                        <option value="clinical-operations">临床运营项目</option>
+                                    </select>
+                                    <div class="form-hint">同样是“猫糖尿病模型”，机制验证、资源询价和药效探索会走完全不同的输出路径。</div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Domain Router</label>
+                                    <select class="form-select" id="domainRoute">
+                                        <option value="auto">自动判断</option>
+                                        <option value="preclinical-study-design">Preclinical Study Design</option>
+                                        <option value="efficacy-model-evaluation">Efficacy Model Evaluation</option>
+                                        <option value="preclinical-pkpd">Preclinical PK/PD</option>
+                                        <option value="toxicology-safety">Toxicology / Safety Assessment</option>
+                                        <option value="clinical-operations">Clinical Operations</option>
+                                        <option value="data-management">Data Management</option>
+                                        <option value="regulatory-report">Regulatory / Study Report</option>
+                                    </select>
+                                    <div class="form-hint">当前页面默认适合临床前研究设计，但需要先把不属于这个域的需求分流出去。</div>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">Deliverable Type</label>
+                                <select class="form-select" id="deliverableType">
+                                    <option value="auto">自动判断</option>
+                                    <option value="intake-note">Intake Note</option>
+                                    <option value="model-fit-assessment">Model Fit Assessment</option>
+                                    <option value="clarification-email">Clarification Email</option>
+                                    <option value="study-design-memo">Study Design Memo</option>
+                                    <option value="protocol-outline">Protocol Outline</option>
+                                    <option value="quotation-structure">Quotation Structure</option>
+                                    <option value="risk-checklist">Risk Checklist</option>
+                                    <option value="internal-review-note">Internal Review Note</option>
+                                </select>
+                                <div class="form-hint">缺少 P0 材料时，系统应优先输出评估和澄清问题，而不是完整 protocol 或报价。</div>
+                            </div>
+
+                            <div class="material-group">
+                                <div class="material-group-title">Human Review Gate</div>
+                                <div class="material-item">
+                                    <input type="checkbox" class="material-checkbox" id="gate-scientific">
+                                    <div class="material-info">
+                                        <div class="material-name">Scientific Review</div>
+                                        <div class="material-desc">模型适配、疾病边界、终点层级、机制链</div>
+                                    </div>
+                                </div>
+                                <div class="material-item">
+                                    <input type="checkbox" class="material-checkbox" id="gate-bd">
+                                    <div class="material-info">
+                                        <div class="material-name">BD Review</div>
+                                        <div class="material-desc">客户原话、权限状态、可外发表达</div>
+                                    </div>
+                                </div>
+                                <div class="material-item">
+                                    <input type="checkbox" class="material-checkbox" id="gate-resource">
+                                    <div class="material-info">
+                                        <div class="material-name">Resource Review</div>
+                                        <div class="material-desc">动物、SOP、样本链条、排期资源</div>
+                                    </div>
+                                </div>
+                                <div class="material-item">
+                                    <input type="checkbox" class="material-checkbox" id="gate-pricing">
+                                    <div class="material-info">
+                                        <div class="material-name">Pricing Review</div>
+                                        <div class="material-desc">成本结构、报价边界、周转时间</div>
+                                    </div>
+                                </div>
+                                <div class="material-item">
+                                    <input type="checkbox" class="material-checkbox" id="gate-qa">
+                                    <div class="material-info">
+                                        <div class="material-name">QA / Compliance Review</div>
+                                        <div class="material-desc">动物福利、外发边界、正式 protocol 风险</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">Project Memory / Rule Update</label>
+                                <textarea class="form-textarea" id="ruleUpdate" placeholder="如果本次人工判断应该沉淀成规则，写在这里。例如：当客户说 DIO + diabetes 时，优先提示模型边界，不得自动写成糖尿病模型。" style="min-height: 80px;"></textarea>
+                                <div class="form-hint">人工修正不能只留在历史记录里。真正有复利的是把修正变成下一次分流规则。</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 3: Material Check -->
+                    <div class="card">
+                        <div class="card-header">Step 3: 材料检查</div>
+                        <div class="card-body">
+                            <div class="alert alert-info">
+                                <span class="alert-icon">ℹ️</span>
+                                <div>
+                                    <strong>材料检查说明</strong><br>
+                                    勾选已有的材料。未勾选的材料将自动标记为 "Not provided"，并影响输出层级判断。
+                                </div>
+                            </div>
+
+                            <div class="material-group">
+                                <div class="material-group-title">P0 关键材料（外发前必须）</div>
+
+                                <div class="material-item">
+                                    <input type="checkbox" class="material-checkbox" id="mat-sponsor-package">
+                                    <div class="material-info">
+                                        <div class="material-name">Sponsor 候选物信息</div>
+                                        <div class="material-desc">候选物类型、靶点、预期 claim、种属数据</div>
+                                    </div>
+                                </div>
+
+                                <div class="material-item">
+                                    <input type="checkbox" class="material-checkbox" id="mat-dio-feasibility">
+                                    <div class="material-info">
+                                        <div class="material-name">DIO/代谢模型可行性</div>
+                                        <div class="material-desc">SOP、动物来源、群体标准、基线表型</div>
+                                    </div>
+                                </div>
+
+                                <div class="material-item">
+                                    <input type="checkbox" class="material-checkbox" id="mat-sample-assay">
+                                    <div class="material-info">
+                                        <div class="material-name">样本和检测链条</div>
+                                        <div class="material-desc">采血 SOP、检测方法验证、qPCR 工作流</div>
+                                    </div>
+                                </div>
+
+                                <div class="material-item">
+                                    <input type="checkbox" class="material-checkbox" id="mat-statistics">
+                                    <div class="material-info">
+                                        <div class="material-name">统计和数据</div>
+                                        <div class="material-desc">主要终点、样本量依据、随机化方案</div>
+                                    </div>
+                                </div>
+
+                                <div class="material-item">
+                                    <input type="checkbox" class="material-checkbox" id="mat-expert-review">
+                                    <div class="material-info">
+                                        <div class="material-name">专家审核</div>
+                                        <div class="material-desc">兽医内分泌、营养、药理、统计审核</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="material-group">
+                                <div class="material-group-title">P1 补充材料（报价/Protocol 前需要）</div>
+
+                                <div class="material-item">
+                                    <input type="checkbox" class="material-checkbox" id="mat-pricing">
+                                    <div class="material-info">
+                                        <div class="material-name">定价输入</div>
+                                        <div class="material-desc">成本结构、设施容量、周转时间</div>
+                                    </div>
+                                </div>
+
+                                <div class="material-item">
+                                    <input type="checkbox" class="material-checkbox" id="mat-welfare">
+                                    <div class="material-info">
+                                        <div class="material-name">动物福利审核</div>
+                                        <div class="material-desc">福利阈值、救援标准、兽医审批</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="btn-group">
+                        <button type="submit" class="btn btn-primary">💾 保存 Intake</button>
+                        <button type="button" class="btn btn-secondary" onclick="showPage('dashboard')">取消</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- View Intake Page -->
+            <div id="page-view-intake" class="page">
+                <div class="page-header">
+                    <h1 class="page-title" id="viewIntakeTitle">Intake 详情</h1>
+                    <p class="page-desc" id="viewIntakeId"></p>
+                </div>
+
+                <div id="viewIntakeContent"></div>
+            </div>
+
+            <!-- Materials Page -->
+            <div id="page-materials" class="page">
+                <div class="page-header">
+                    <h1 class="page-title">材料收集</h1>
+                    <p class="page-desc">追踪和管理 P0/P1 材料收集状态</p>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value" id="mat-total">7</div>
+                        <div class="stat-label">总材料类型</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="mat-collected">0</div>
+                        <div class="stat-label">已收集</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="mat-pending">7</div>
+                        <div class="stat-label">待收集</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="mat-progress">0%</div>
+                        <div class="stat-label">完成度</div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <span>P0 关键材料</span>
+                        <span style="font-size: 12px; color: var(--text-light);">外发前必须</span>
+                    </div>
+                    <div class="card-body" id="p0MaterialsList">
+                        <!-- Dynamic content -->
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <span>P1 补充材料</span>
+                        <span style="font-size: 12px; color: var(--text-light);">报价/Protocol 前需要</span>
+                    </div>
+                    <div class="card-body" id="p1MaterialsList">
+                        <!-- Dynamic content -->
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <span>材料收集模板</span>
+                        <button class="btn btn-sm btn-secondary" onclick="downloadMaterialsGuide()">📥 下载完整指南</button>
+                    </div>
+                    <div class="card-body">
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;">
+                            <button class="btn btn-secondary" onclick="showTemplate('sponsor')">📋 Sponsor 信息模板</button>
+                            <button class="btn btn-secondary" onclick="showTemplate('dio')">🐱 DIO 模型模板</button>
+                            <button class="btn btn-secondary" onclick="showTemplate('assay')">🧪 检测链条模板</button>
+                            <button class="btn btn-secondary" onclick="showTemplate('stats')">📊 统计设计模板</button>
+                            <button class="btn btn-secondary" onclick="showTemplate('expert')">👨‍🔬 专家审核模板</button>
+                            <button class="btn btn-secondary" onclick="showTemplate('pricing')">💰 定价输入模板</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Template Modal -->
+                <div id="templateModal" class="hidden" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000;">
+                    <div style="background: white; border-radius: 12px; width: 90%; max-width: 800px; max-height: 80vh; overflow: hidden;">
+                        <div style="padding: 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
+                            <h3 id="templateTitle">模板</h3>
+                            <button class="btn btn-sm btn-secondary" onclick="closeTemplate()">✕ 关闭</button>
+                        </div>
+                        <div id="templateContent" style="padding: 20px; overflow-y: auto; max-height: calc(80vh - 120px);"></div>
+                        <div style="padding: 16px 20px; border-top: 1px solid var(--border); display: flex; gap: 12px;">
+                            <button class="btn btn-primary" onclick="copyTemplate()">📋 复制模板</button>
+                            <button class="btn btn-secondary" onclick="closeTemplate()">关闭</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Experts Page -->
+            <div id="page-experts" class="page">
+                <div class="page-header">
+                    <h1 class="page-title">专家管理</h1>
+                    <p class="page-desc">管理专家档案和审核状态</p>
+                </div>
+
+                <div class="alert alert-warning">
+                    <span class="alert-icon">⚠️</span>
+                    <div>
+                        <strong>专家引用规则</strong><br>
+                        专家资质和单位未验证前，不能在外发材料中引用专家姓名。专家审核材料属于 Class A 参考材料，不能替代 Class B 内部执行证据。
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <span>已指定专家</span>
+                        <button class="btn btn-sm btn-primary" onclick="addExpert()">➕ 添加专家</button>
+                    </div>
+                    <div class="card-body">
+                        <table class="table" id="expertsTable">
+                            <thead>
+                                <tr>
+                                    <th>角色</th>
+                                    <th>姓名</th>
+                                    <th>资质</th>
+                                    <th>职责</th>
+                                    <th>验证状态</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="expertsTableBody">
+                                <!-- Dynamic content -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">审核任务</div>
+                    <div class="card-body" id="reviewTasks">
+                        <div class="empty-state">
+                            <div class="empty-icon">📝</div>
+                            <p>暂无待审核任务</p>
+                            <p style="font-size: 13px; color: var(--text-light);">创建 Intake 后，系统将自动生成审核任务</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Messages Page -->
+            <div id="page-messages" class="page">
+                <div class="page-header">
+                    <h1 class="page-title">请求消息生成</h1>
+                    <p class="page-desc">生成可直接发送给内部角色的材料请求消息</p>
+                </div>
+
+                <div class="alert alert-info">
+                    <span class="alert-icon">💡</span>
+                    <div>
+                        <strong>使用说明</strong><br>
+                        选择 Intake 和目标角色，系统将自动生成包含分类信息和缺失材料的请求消息。复制后可直接通过飞书/邮件发送。
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">生成请求消息</div>
+                    <div class="card-body">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">选择 Intake</label>
+                                <select class="form-select" id="msgIntakeSelect" onchange="updateMessagePreview()">
+                                    <option value="">请选择...</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">目标角色</label>
+                                <select class="form-select" id="msgRoleSelect" onchange="updateMessagePreview()">
+                                    <option value="">请选择...</option>
+                                    <option value="bd">BD / Sponsor Lead</option>
+                                    <option value="study-director">Study Director / Animal Facility</option>
+                                    <option value="operations">Operations / Finance</option>
+                                    <option value="expert">Scientific Expert</option>
+                                    <option value="assay">Assay Lead / Lab Ops</option>
+                                    <option value="statistician">Statistician</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <span>消息预览</span>
+                        <button class="btn btn-sm btn-primary" onclick="copyMessage()">📋 复制消息</button>
+                    </div>
+                    <div class="card-body">
+                        <div id="messagePreview" class="memo-output" style="min-height: 300px;">
+                            请先选择 Intake 和目标角色
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">快速生成</div>
+                    <div class="card-body">
+                        <p style="margin-bottom: 16px; color: var(--text-light);">为所有待处理 Intake 批量生成请求消息：</p>
+                        <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                            <button class="btn btn-secondary" onclick="generateAllMessages('bd')">📨 生成所有 BD 请求</button>
+                            <button class="btn btn-secondary" onclick="generateAllMessages('study-director')">📨 生成所有 Study Director 请求</button>
+                            <button class="btn btn-secondary" onclick="generateAllMessages('expert')">📨 生成所有专家审核请求</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <input type="file" id="importFile" accept=".json" style="display: none;" onchange="handleImport(event)">
+
+    <script>
+        // Data Store
+        let intakes = JSON.parse(localStorage.getItem('sdcopilot_intakes') || '[]');
+
+        // Axis labels
+        const axisALabels = {
+            'normal': '正常代谢猫',
+            'overweight': '超重/肥胖猫',
+            'dio': 'DIO 肥胖猫',
+            'metabolic-abnormality': '肥胖伴代谢异常',
+            'at-risk': '糖尿病高风险猫',
+            'stable-diabetes': '稳定临床糖尿病猫'
+        };
+
+        const axisBLabels = {
+            'model-resource': '模型资源供应',
+            'model-fit': '模型适配评估',
+            'mechanism-validation': '早期机制验证',
+            'metabolic-efficacy': '代谢药效探索',
+            'diabetes-treatment': '糖尿病治疗评价',
+            'nutrition': '营养/宠物食品评价'
+        };
+
+        const studyIntentLabels = {
+            'mechanism-validation': '机制验证',
+            'efficacy-exploration': '药效探索',
+            'dose-exploration': '剂量探索',
+            'pkpd': 'PK/PD',
+            'toxicology-safety': '毒理/安评',
+            'model-resource-inquiry': '模型资源询价',
+            'clinical-operations': '临床运营项目'
+        };
+
+        const domainRouteLabels = {
+            'preclinical-study-design': 'Preclinical Study Design',
+            'efficacy-model-evaluation': 'Efficacy Model Evaluation',
+            'preclinical-pkpd': 'Preclinical PK/PD',
+            'toxicology-safety': 'Toxicology / Safety Assessment',
+            'clinical-operations': 'Clinical Operations',
+            'data-management': 'Data Management',
+            'regulatory-report': 'Regulatory / Study Report'
+        };
+
+        const deliverableTypeLabels = {
+            'intake-note': 'Intake Note',
+            'model-fit-assessment': 'Model Fit Assessment',
+            'clarification-email': 'Clarification Email',
+            'study-design-memo': 'Study Design Memo',
+            'protocol-outline': 'Protocol Outline',
+            'quotation-structure': 'Quotation Structure',
+            'risk-checklist': 'Risk Checklist',
+            'internal-review-note': 'Internal Review Note'
+        };
+
+        const reviewGateLabels = {
+            scientific: 'Scientific Review',
+            bd: 'BD Review',
+            resource: 'Resource Review',
+            pricing: 'Pricing Review',
+            qa: 'QA / Compliance Review'
+        };
+
+        function inferStudyIntent(intake) {
+            const text = `${intake.question || ''} ${intake.candidateType || ''} ${intake.notes || ''}`.toLowerCase();
+            if (intake.axisB === 'model-resource' || /报价|数量|资源|动物/.test(text)) return 'model-resource-inquiry';
+            if (/毒理|安评|安全性|tolerability|tox/.test(text)) return 'toxicology-safety';
+            if (/pk|pd|暴露|药代|药效动力|时间窗/.test(text)) return 'pkpd';
+            if (/剂量|dose|给药剂量/.test(text)) return 'dose-exploration';
+            if (intake.axisB === 'mechanism-validation' || /galnac|sirna|小核酸|kd|qpcr|靶基因/.test(text)) return 'mechanism-validation';
+            if (intake.axisB === 'metabolic-efficacy' || intake.axisB === 'diabetes-treatment' || /药效|体重|血糖|胰岛素|果糖胺/.test(text)) return 'efficacy-exploration';
+            if (/cra|中心|入组|sdv|query|临床运营/.test(text)) return 'clinical-operations';
+            return 'efficacy-exploration';
+        }
+
+        function inferDomainRoute(intake, studyIntent) {
+            if (studyIntent === 'clinical-operations') return 'clinical-operations';
+            if (studyIntent === 'toxicology-safety') return 'toxicology-safety';
+            if (studyIntent === 'pkpd') return 'preclinical-pkpd';
+            if (intake.axisB === 'model-resource') return 'efficacy-model-evaluation';
+            if (['mechanism-validation', 'efficacy-exploration', 'dose-exploration'].includes(studyIntent)) return 'preclinical-study-design';
+            return 'preclinical-study-design';
+        }
+
+        function inferDeliverableType(intake, studyIntent) {
+            const p0Count = countP0Materials(intake.materials || {});
+            if (!intake.axisA || !intake.axisB) return 'intake-note';
+            if (studyIntent === 'model-resource-inquiry') return 'clarification-email';
+            if (p0Count < 2) return 'model-fit-assessment';
+            if (studyIntent === 'toxicology-safety') return 'risk-checklist';
+            if (p0Count >= 4 && intake.materials?.statistics && intake.materials?.expertReview) return 'protocol-outline';
+            return 'study-design-memo';
+        }
+
+        function countP0Materials(materialSet) {
+            return [
+                materialSet.sponsorPackage,
+                materialSet.dioFeasibility,
+                materialSet.sampleAssay,
+                materialSet.statistics,
+                materialSet.expertReview
+            ].filter(Boolean).length;
+        }
+
+        function getEffectiveWorkflow(intake) {
+            const studyIntent = intake.studyIntent && intake.studyIntent !== 'auto'
+                ? intake.studyIntent
+                : inferStudyIntent(intake);
+            const domainRoute = intake.domainRoute && intake.domainRoute !== 'auto'
+                ? intake.domainRoute
+                : inferDomainRoute(intake, studyIntent);
+            const deliverableType = intake.deliverableType && intake.deliverableType !== 'auto'
+                ? intake.deliverableType
+                : inferDeliverableType(intake, studyIntent);
+
+            return { studyIntent, domainRoute, deliverableType };
+        }
+
+        function getRequiredReviewGates(intake) {
+            const workflow = getEffectiveWorkflow(intake);
+            const gates = new Set(['scientific', 'bd']);
+            if (['model-resource', 'metabolic-efficacy', 'diabetes-treatment'].includes(intake.axisB)) gates.add('resource');
+            if (workflow.deliverableType === 'quotation-structure') gates.add('pricing');
+            if (['protocol-outline', 'risk-checklist'].includes(workflow.deliverableType) || workflow.studyIntent === 'toxicology-safety') gates.add('qa');
+            if (intake.materials?.pricing) gates.add('pricing');
+            if (intake.materials?.welfare) gates.add('qa');
+            return Array.from(gates);
+        }
+
+        function getReviewGateStatus(intake) {
+            const selected = intake.reviewGates || {};
+            const required = getRequiredReviewGates(intake);
+            return required.map(key => ({
+                key,
+                label: reviewGateLabels[key],
+                done: Boolean(selected[key])
+            }));
+        }
+
+        function generateWorkflowWarnings(intake) {
+            const workflow = getEffectiveWorkflow(intake);
+            const warnings = [];
+            const text = `${intake.question || ''} ${intake.candidateType || ''}`.toLowerCase();
+
+            if ((/糖尿病|diabetes/.test(text) || intake.axisB === 'diabetes-treatment') && intake.axisA !== 'stable-diabetes') {
+                warnings.push('出现糖尿病表达，但当前不是“稳定临床糖尿病猫”。只能写成模型边界/代谢异常评估，不能写成糖尿病治疗评价。');
+            }
+            if (/galnac|sirna|小核酸/.test(text) && !intake.target) {
+                warnings.push('GalNAc/小核酸需求缺少靶点。第一交付物应优先澄清靶组织、猫序列验证、KD 和 PD 时间窗。');
+            }
+            if (workflow.deliverableType === 'protocol-outline' && countP0Materials(intake.materials || {}) < 4) {
+                warnings.push('Protocol Outline 需要更多 P0 材料。缺少材料时只能输出 protocol skeleton，不应写成可执行 protocol。');
+            }
+            if (workflow.deliverableType === 'quotation-structure' && !intake.materials?.pricing) {
+                warnings.push('报价结构缺少定价输入。不能生成具体价格、动物数量或 timeline。');
+            }
+
+            return warnings;
+        }
+
+        // Navigation
+        document.querySelectorAll('.nav-item[data-page]').forEach(item => {
+            item.addEventListener('click', () => {
+                showPage(item.dataset.page);
+            });
+        });
+
+        function showPage(pageId) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+
+            document.getElementById('page-' + pageId).classList.add('active');
+            document.querySelector(`.nav-item[data-page="${pageId}"]`)?.classList.add('active');
+
+            if (pageId === 'dashboard') {
+                updateDashboard();
+            } else if (pageId === 'materials') {
+                updateMaterialsPage();
+            } else if (pageId === 'experts') {
+                updateExpertsPage();
+            } else if (pageId === 'messages') {
+                updateMessagesPage();
+            }
+        }
+
+        // Axis Selection
+        document.querySelectorAll('.axis-option').forEach(option => {
+            option.addEventListener('click', () => {
+                const parent = option.parentElement;
+                parent.querySelectorAll('.axis-option').forEach(o => o.classList.remove('selected'));
+                option.classList.add('selected');
+            });
+        });
+
+        // Save Intake
+        function saveIntake(e) {
+            e.preventDefault();
+
+            const axisA = document.querySelector('#axisA .axis-option.selected')?.dataset.value || '';
+            const axisB = document.querySelector('#axisB .axis-option.selected')?.dataset.value || '';
+
+            const materials = {
+                sponsorPackage: document.getElementById('mat-sponsor-package').checked,
+                dioFeasibility: document.getElementById('mat-dio-feasibility').checked,
+                sampleAssay: document.getElementById('mat-sample-assay').checked,
+                statistics: document.getElementById('mat-statistics').checked,
+                expertReview: document.getElementById('mat-expert-review').checked,
+                pricing: document.getElementById('mat-pricing').checked,
+                welfare: document.getElementById('mat-welfare').checked
+            };
+
+            const reviewGates = {
+                scientific: document.getElementById('gate-scientific').checked,
+                bd: document.getElementById('gate-bd').checked,
+                resource: document.getElementById('gate-resource').checked,
+                pricing: document.getElementById('gate-pricing').checked,
+                qa: document.getElementById('gate-qa').checked
+            };
+
+            // Calculate output level
+            const p0Count = countP0Materials(materials);
+            let outputLevel = 'L0';
+            if (axisA && axisB) {
+                outputLevel = 'L1';
+                if (p0Count >= 3) outputLevel = 'L2';
+                if (p0Count >= 4 && materials.expertReview && materials.welfare) outputLevel = 'L3';
+            }
+
+            const intake = {
+                id: 'INTAKE-' + new Date().toISOString().slice(0, 10) + '-' + String(intakes.length + 1).padStart(3, '0'),
+                createdAt: new Date().toISOString(),
+                question: document.getElementById('question').value,
+                sourceStatus: document.getElementById('sourceStatus').value,
+                permissionStatus: document.getElementById('permissionStatus').value,
+                candidateType: document.getElementById('candidateType').value,
+                route: document.getElementById('route').value,
+                target: document.getElementById('target').value,
+                notes: document.getElementById('notes').value,
+                axisA,
+                axisB,
+                studyIntent: document.getElementById('studyIntent').value,
+                domainRoute: document.getElementById('domainRoute').value,
+                deliverableType: document.getElementById('deliverableType').value,
+                reviewGates,
+                ruleUpdate: document.getElementById('ruleUpdate').value,
+                materials,
+                outputLevel
+            };
+
+            intakes.push(intake);
+            localStorage.setItem('sdcopilot_intakes', JSON.stringify(intakes));
+
+            // Reset form
+            document.getElementById('intakeForm').reset();
+            document.querySelectorAll('.axis-option').forEach(o => o.classList.remove('selected'));
+
+            // Show the intake
+            viewIntake(intake.id);
+        }
+
+        // Update Dashboard
+        function updateDashboard() {
+            document.getElementById('stat-total').textContent = intakes.length;
+            document.getElementById('stat-l0').textContent = intakes.filter(i => i.outputLevel === 'L0').length;
+            document.getElementById('stat-l1').textContent = intakes.filter(i => i.outputLevel === 'L1').length;
+            document.getElementById('stat-l2').textContent = intakes.filter(i => ['L2', 'L3', 'L4'].includes(i.outputLevel)).length;
+
+            // Update intake list
+            const listHtml = intakes.length === 0
+                ? '<div class="empty-state" style="padding: 20px 0; font-size: 13px;">暂无记录</div>'
+                : intakes.slice().reverse().map(i => `
+                    <div class="intake-item" onclick="viewIntake('${i.id}')">
+                        <span>${i.id.split('-').slice(-1)[0]}</span>
+                        <span class="level-tag level-${i.outputLevel.toLowerCase()}">${i.outputLevel}</span>
+                    </div>
+                `).join('');
+
+            document.getElementById('intakeList').innerHTML = listHtml;
+
+            // Update recent intakes table
+            if (intakes.length === 0) {
+                document.getElementById('recentIntakes').innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">📋</div>
+                        <p>暂无 Intake 记录</p>
+                        <button class="btn btn-primary" style="margin-top: 16px;" onclick="showPage('new-intake')">创建第一个 Intake</button>
+                    </div>
+                `;
+            } else {
+                document.getElementById('recentIntakes').innerHTML = `
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Intake ID</th>
+                                <th>分类</th>
+                                <th>业务路由</th>
+                                <th>层级</th>
+                                <th>创建时间</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${intakes.slice().reverse().slice(0, 10).map(i => {
+                                const workflow = getEffectiveWorkflow(i);
+                                return `
+                                <tr>
+                                    <td>${i.id}</td>
+                                    <td>${axisALabels[i.axisA] || 'Not provided'} + ${axisBLabels[i.axisB] || 'Not provided'}</td>
+                                    <td>${domainRouteLabels[workflow.domainRoute] || 'Not provided'}<br><span style="font-size: 12px; color: var(--text-light);">${deliverableTypeLabels[workflow.deliverableType] || 'Not provided'}</span></td>
+                                    <td><span class="level-tag level-${i.outputLevel.toLowerCase()}">${i.outputLevel}</span></td>
+                                    <td>${new Date(i.createdAt).toLocaleString()}</td>
+                                    <td><button class="btn btn-sm btn-secondary" onclick="viewIntake('${i.id}')">查看</button></td>
+                                </tr>
+                                `;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                `;
+            }
+        }
+
+        // View Intake
+        function viewIntake(id) {
+            const intake = intakes.find(i => i.id === id);
+            if (!intake) return;
+
+            document.getElementById('viewIntakeTitle').textContent = intake.id;
+            document.getElementById('viewIntakeId').textContent = `创建于 ${new Date(intake.createdAt).toLocaleString()}`;
+
+            const p0Materials = [
+                { key: 'sponsorPackage', name: 'Sponsor 候选物信息' },
+                { key: 'dioFeasibility', name: 'DIO/代谢模型可行性' },
+                { key: 'sampleAssay', name: '样本和检测链条' },
+                { key: 'statistics', name: '统计和数据' },
+                { key: 'expertReview', name: '专家审核' }
+            ];
+
+            const missingP0 = p0Materials.filter(m => !intake.materials[m.key]);
+
+            // Generate memo skeleton
+            const memoSkeleton = generateMemoSkeleton(intake);
+            const workflow = getEffectiveWorkflow(intake);
+            const gateStatus = getReviewGateStatus(intake);
+            const workflowWarnings = generateWorkflowWarnings(intake);
+
+            document.getElementById('viewIntakeContent').innerHTML = `
+                <!-- Output Level -->
+                <div class="card">
+                    <div class="card-header">输出层级</div>
+                    <div class="card-body">
+                        <div class="output-level">
+                            <div class="level-card ${intake.outputLevel === 'L0' ? 'current' : ''}">
+                                <div class="level-name">L0</div>
+                                <div class="level-desc">Intake Note</div>
+                            </div>
+                            <div class="level-card ${intake.outputLevel === 'L1' ? 'current' : (intake.outputLevel !== 'L0' ? 'achieved' : '')}">
+                                <div class="level-name">L1</div>
+                                <div class="level-desc">内部分流</div>
+                            </div>
+                            <div class="level-card ${intake.outputLevel === 'L2' ? 'current' : ''}">
+                                <div class="level-name">L2</div>
+                                <div class="level-desc">可讨论</div>
+                            </div>
+                            <div class="level-card">
+                                <div class="level-name">L3</div>
+                                <div class="level-desc">Protocol/报价</div>
+                            </div>
+                        </div>
+                        ${intake.outputLevel === 'L0' ? '<div class="alert alert-danger"><span class="alert-icon">🚫</span><div>缺少双轴分类，无法进入分流流程</div></div>' : ''}
+                        ${intake.outputLevel === 'L1' && missingP0.length > 0 ? `<div class="alert alert-warning"><span class="alert-icon">⚠️</span><div>缺少 P0 材料：${missingP0.map(m => m.name).join('、')}</div></div>` : ''}
+                    </div>
+                </div>
+
+                <!-- Classification -->
+                <div class="card">
+                    <div class="card-header">双轴分类</div>
+                    <div class="card-body">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">科学疾病/代谢状态</label>
+                                <div style="padding: 10px 14px; background: #f5f5f5; border-radius: 8px;">
+                                    ${intake.axisA ? axisALabels[intake.axisA] : '<span style="color: #f44336;">Not provided</span>'}
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">CRO 业务交付类型</label>
+                                <div style="padding: 10px 14px; background: #f5f5f5; border-radius: 8px;">
+                                    ${intake.axisB ? axisBLabels[intake.axisB] : '<span style="color: #f44336;">Not provided</span>'}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Decision Workflow -->
+                <div class="card">
+                    <div class="card-header">业务路由与交付物判断</div>
+                    <div class="card-body">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">Study Intent</label>
+                                <div style="padding: 10px 14px; background: #f5f5f5; border-radius: 8px;">
+                                    ${studyIntentLabels[workflow.studyIntent] || 'Not provided'}
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Domain Router</label>
+                                <div style="padding: 10px 14px; background: #f5f5f5; border-radius: 8px;">
+                                    ${domainRouteLabels[workflow.domainRoute] || 'Not provided'}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Deliverable Type</label>
+                            <div style="padding: 10px 14px; background: #f5f5f5; border-radius: 8px;">
+                                ${deliverableTypeLabels[workflow.deliverableType] || 'Not provided'}
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Human Review Gate</label>
+                            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;">
+                                ${gateStatus.map(g => `
+                                    <div style="padding: 10px 12px; background: ${g.done ? '#e8f5e9' : '#fff3e0'}; border-radius: 8px; border: 1px solid ${g.done ? '#4caf50' : '#ff9800'};">
+                                        <strong>${g.done ? '✓' : '待审'} ${g.label}</strong>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                        ${workflowWarnings.length > 0 ? `
+                            <div class="alert alert-warning">
+                                <span class="alert-icon">⚠️</span>
+                                <div>
+                                    <strong>业务规则提醒</strong><br>
+                                    ${workflowWarnings.map(w => `- ${w}`).join('<br>')}
+                                </div>
+                            </div>
+                        ` : ''}
+                        ${intake.ruleUpdate ? `
+                            <div class="alert alert-info">
+                                <span class="alert-icon">💡</span>
+                                <div>
+                                    <strong>Project Memory / Rule Update</strong><br>
+                                    ${intake.ruleUpdate}
+                                </div>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+
+                <!-- Original Question -->
+                <div class="card">
+                    <div class="card-header">原始问题/需求</div>
+                    <div class="card-body">
+                        <div style="padding: 16px; background: #f8f9fa; border-radius: 8px; white-space: pre-wrap;">${intake.question}</div>
+                        <div class="form-row" style="margin-top: 16px;">
+                            <div>
+                                <strong>来源状态：</strong> ${intake.sourceStatus || 'Not provided'}
+                            </div>
+                            <div>
+                                <strong>权限状态：</strong> ${intake.permissionStatus || 'Not provided'}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Candidate Info -->
+                <div class="card">
+                    <div class="card-header">候选物信息</div>
+                    <div class="card-body">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">候选物/干预类型</label>
+                                <div style="padding: 10px 14px; background: #f5f5f5; border-radius: 8px;">
+                                    ${intake.candidateType || '<span style="color: #f44336;">Not provided</span>'}
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">给药途径</label>
+                                <div style="padding: 10px 14px; background: #f5f5f5; border-radius: 8px;">
+                                    ${intake.route || '<span style="color: #f44336;">Not provided</span>'}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">靶点/机制</label>
+                            <div style="padding: 10px 14px; background: #f5f5f5; border-radius: 8px;">
+                                ${intake.target || '<span style="color: #f44336;">Not provided</span>'}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                ${intake.notes ? `
+                <!-- Notes -->
+                <div class="card">
+                    <div class="card-header" style="background: #fff3e0;">⚠️ 分类注释</div>
+                    <div class="card-body">
+                        <div style="padding: 16px; background: #fff8e1; border-radius: 8px; border-left: 4px solid #ff9800;">
+                            ${intake.notes}
+                        </div>
+                    </div>
+                </div>
+                ` : ''}
+
+                <!-- Memo Skeleton -->
+                <div class="card">
+                    <div class="card-header">
+                        <span>Memo 骨架</span>
+                        <button class="btn btn-sm btn-secondary" onclick="copyMemo()">📋 复制</button>
+                    </div>
+                    <div class="card-body">
+                        <div class="memo-output" id="memoOutput">${memoSkeleton}</div>
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="btn-group">
+                    <button class="btn btn-secondary" onclick="showPage('dashboard')">← 返回看板</button>
+                    <button class="btn btn-danger" onclick="deleteIntake('${intake.id}')">🗑️ 删除</button>
+                </div>
+            `;
+
+            showPage('view-intake');
+        }
+
+        // Generate Memo Skeleton
+        function generateMemoSkeleton(intake) {
+            const date = new Date().toISOString().slice(0, 10);
+            const workflow = getEffectiveWorkflow(intake);
+            const gateStatus = getReviewGateStatus(intake);
+            const workflowWarnings = generateWorkflowWarnings(intake);
+            return `# Study Design Memo Skeleton
+
+Date: ${date}
+Intake ID: ${intake.id}
+Output Level: ${intake.outputLevel}
+Status: Internal Only
+
+## Classification
+
+| Axis | Value |
+|------|-------|
+| Scientific State | ${intake.axisA ? axisALabels[intake.axisA] : 'Not provided'} |
+| CRO Delivery Type | ${intake.axisB ? axisBLabels[intake.axisB] : 'Not provided'} |
+
+## Decision Workflow
+
+| Field | Value |
+|-------|-------|
+| Study Intent | ${studyIntentLabels[workflow.studyIntent] || 'Not provided'} |
+| Domain Router | ${domainRouteLabels[workflow.domainRoute] || 'Not provided'} |
+| Deliverable Type | ${deliverableTypeLabels[workflow.deliverableType] || 'Not provided'} |
+
+### Human Review Gate
+
+${gateStatus.map(g => `- ${g.done ? 'Done' : 'Pending'}: ${g.label}`).join('\n')}
+
+## Candidate Information
+
+| Field | Value |
+|-------|-------|
+| Type | ${intake.candidateType || 'Not provided'} |
+| Route | ${intake.route || 'Not provided'} |
+| Target | ${intake.target || 'Not provided'} |
+
+## Original Question
+
+${intake.question}
+${intake.notes ? `
+## Classification Notes
+
+${intake.notes}
+` : ''}
+## Material Status
+
+| Material | Status |
+|----------|--------|
+| Sponsor Package | ${intake.materials.sponsorPackage ? 'Provided' : 'Not provided'} |
+| DIO Feasibility | ${intake.materials.dioFeasibility ? 'Provided' : 'Not provided'} |
+| Sample/Assay Chain | ${intake.materials.sampleAssay ? 'Provided' : 'Not provided'} |
+| Statistics | ${intake.materials.statistics ? 'Provided' : 'Not provided'} |
+| Expert Review | ${intake.materials.expertReview ? 'Provided' : 'Not provided'} |
+
+## Gaps and Questions
+
+${!intake.target ? '- Target/mechanism: Not provided. Need to confirm with sponsor.\n' : ''}${!intake.materials.sponsorPackage ? '- Sponsor candidate package: Not provided.\n' : ''}${!intake.materials.dioFeasibility ? '- DIO/metabolic model feasibility: Not provided.\n' : ''}${!intake.materials.expertReview ? '- Expert review: Not reviewed.\n' : ''}
+
+## Business Rule Warnings
+
+${workflowWarnings.length > 0 ? workflowWarnings.map(w => `- ${w}`).join('\n') : '- No additional workflow warning generated.'}
+${intake.ruleUpdate ? `
+## Project Memory / Rule Update
+
+${intake.ruleUpdate}
+` : ''}
+
+## Hard Rules Applied
+
+- No animal counts, timeline, or pricing without real data
+- DIO capability is candidate study-design direction only
+- ${intake.axisA === 'stable-diabetes' ? 'Diabetes treatment claim requires clinical diabetes criteria and vet endocrinology review' : 'Not a diabetes treatment claim'}
+
+---
+Generated by Study Design Copilot | ${date}
+`;
+        }
+
+        // Copy Memo
+        function copyMemo() {
+            const memo = document.getElementById('memoOutput').textContent;
+            navigator.clipboard.writeText(memo).then(() => {
+                alert('Memo 已复制到剪贴板');
+            });
+        }
+
+        // Delete Intake
+        function deleteIntake(id) {
+            if (confirm('确定要删除这个 Intake 吗？')) {
+                intakes = intakes.filter(i => i.id !== id);
+                localStorage.setItem('sdcopilot_intakes', JSON.stringify(intakes));
+                showPage('dashboard');
+            }
+        }
+
+        // Export Data
+        function exportAllData() {
+            const data = {
+                version: '1.4',
+                exportedAt: new Date().toISOString(),
+                intakes,
+                materials,
+                experts,
+                projectMemory: intakes
+                    .filter(i => i.ruleUpdate)
+                    .map(i => ({ intakeId: i.id, ruleUpdate: i.ruleUpdate, createdAt: i.createdAt }))
+            };
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `sdcopilot-export-${new Date().toISOString().slice(0, 10)}.json`;
+            a.click();
+        }
+
+        // Import Data
+        function importData() {
+            document.getElementById('importFile').click();
+        }
+
+        function handleImport(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                try {
+                    const data = JSON.parse(event.target.result);
+                    if (data.intakes && Array.isArray(data.intakes)) {
+                        if (confirm(`将导入 ${data.intakes.length} 条记录。现有 ${intakes.length} 条记录将被合并。继续？`)) {
+                            // Merge, avoiding duplicates by ID
+                            const existingIds = new Set(intakes.map(i => i.id));
+                            const newIntakes = data.intakes.filter(i => !existingIds.has(i.id));
+                            intakes = [...intakes, ...newIntakes];
+                            localStorage.setItem('sdcopilot_intakes', JSON.stringify(intakes));
+                            if (data.materials && typeof data.materials === 'object') {
+                                materials = { ...materials, ...data.materials };
+                                localStorage.setItem('sdcopilot_materials', JSON.stringify(materials));
+                            }
+                            if (data.experts && Array.isArray(data.experts)) {
+                                const existingExpertIds = new Set(experts.map(e => e.id));
+                                experts = [...experts, ...data.experts.filter(e => !existingExpertIds.has(e.id))];
+                                localStorage.setItem('sdcopilot_experts', JSON.stringify(experts));
+                            }
+                            updateDashboard();
+                            updateMaterialsPage();
+                            updateExpertsPage();
+                            updateMessagesPage();
+                            alert(`成功导入 ${newIntakes.length} 条新记录`);
+                        }
+                    }
+                } catch (err) {
+                    alert('导入失败：无效的 JSON 文件');
+                }
+            };
+            reader.readAsText(file);
+            e.target.value = '';
+        }
+
+        // Materials Data
+        let materials = JSON.parse(localStorage.getItem('sdcopilot_materials') || '{}');
+
+        const materialsList = {
+            p0: [
+                { id: 'sponsor-package', name: 'Sponsor 候选物信息', desc: '候选物类型、靶点、预期claim、种属数据', owner: 'BD / Sponsor Lead' },
+                { id: 'dio-feasibility', name: 'DIO/代谢模型可行性', desc: 'SOP、动物来源、群体标准、基线表型', owner: 'Study Director' },
+                { id: 'sample-assay', name: '样本和检测链条', desc: '采血SOP、检测方法验证、qPCR工作流', owner: 'Lab Ops / Assay Lead' },
+                { id: 'statistics', name: '统计和数据', desc: '主要终点、样本量依据、随机化方案', owner: 'Statistician' },
+                { id: 'expert-review', name: '专家审核', desc: '兽医内分泌、营养、药理、统计审核', owner: 'Expert Network' }
+            ],
+            p1: [
+                { id: 'pricing', name: '定价输入', desc: '成本结构、设施容量、周转时间', owner: 'Operations / Finance' },
+                { id: 'welfare', name: '动物福利审核', desc: '福利阈值、救援标准、兽医审批', owner: 'Veterinarian / IACUC' }
+            ]
+        };
+
+        function updateMaterialsPage() {
+            const p0Html = materialsList.p0.map(m => {
+                const status = materials[m.id] || {};
+                const isCollected = status.collected;
+                return `
+                    <div class="material-item">
+                        <input type="checkbox" class="material-checkbox" ${isCollected ? 'checked' : ''}
+                            onchange="toggleMaterial('${m.id}', this.checked)">
+                        <div class="material-info">
+                            <div class="material-name">${m.name}</div>
+                            <div class="material-desc">${m.desc}</div>
+                            <div style="font-size: 12px; color: var(--text-light); margin-top: 4px;">Owner: ${m.owner}</div>
+                        </div>
+                        <span class="material-status ${isCollected ? 'status-provided' : 'status-missing'}">
+                            ${isCollected ? '已收集' : 'Not provided'}
+                        </span>
+                    </div>
+                `;
+            }).join('');
+
+            const p1Html = materialsList.p1.map(m => {
+                const status = materials[m.id] || {};
+                const isCollected = status.collected;
+                return `
+                    <div class="material-item">
+                        <input type="checkbox" class="material-checkbox" ${isCollected ? 'checked' : ''}
+                            onchange="toggleMaterial('${m.id}', this.checked)">
+                        <div class="material-info">
+                            <div class="material-name">${m.name}</div>
+                            <div class="material-desc">${m.desc}</div>
+                            <div style="font-size: 12px; color: var(--text-light); margin-top: 4px;">Owner: ${m.owner}</div>
+                        </div>
+                        <span class="material-status ${isCollected ? 'status-provided' : 'status-missing'}">
+                            ${isCollected ? '已收集' : 'Not provided'}
+                        </span>
+                    </div>
+                `;
+            }).join('');
+
+            document.getElementById('p0MaterialsList').innerHTML = p0Html;
+            document.getElementById('p1MaterialsList').innerHTML = p1Html;
+
+            // Update stats
+            const total = materialsList.p0.length + materialsList.p1.length;
+            const collected = Object.values(materials).filter(m => m.collected).length;
+            document.getElementById('mat-total').textContent = total;
+            document.getElementById('mat-collected').textContent = collected;
+            document.getElementById('mat-pending').textContent = total - collected;
+            document.getElementById('mat-progress').textContent = Math.round(collected / total * 100) + '%';
+        }
+
+        function toggleMaterial(id, collected) {
+            materials[id] = { collected, updatedAt: new Date().toISOString() };
+            localStorage.setItem('sdcopilot_materials', JSON.stringify(materials));
+            updateMaterialsPage();
+        }
+
+        // Templates
+        const templates = {
+            sponsor: {
+                title: 'Sponsor 候选物信息模板',
+                content: `## Sponsor 候选物信息
+
+候选物名称/代号: _______________
+模态类型: _______________
+靶点: _______________
+预期作用机制: _______________
+
+### 开发阶段
+- [ ] 早期发现
+- [ ] 先导优化
+- [ ] 临床前
+- [ ] IND-enabling
+- [ ] 临床阶段
+
+### 预期研究 Claim
+- [ ] 靶点敲低/机制验证 (mechanism validation)
+- [ ] 代谢指标改善 (metabolic efficacy)
+- [ ] 体重减轻 (weight reduction)
+- [ ] 糖尿病治疗效果 (diabetes treatment)
+- [ ] 其他: _______________
+
+### 给药方案
+途径: _______________
+频率: _______________
+剂量范围: _______________
+
+### 种属桥接数据
+是否有小鼠数据: [ ] 有 [ ] 无
+是否有大鼠数据: [ ] 有 [ ] 无
+是否有NHP数据: [ ] 有 [ ] 无
+是否有猫特异性数据: [ ] 有 [ ] 无
+
+### 猫体内数据（如有）
+靶点表达: _______________
+PK/暴露: _______________
+耐受性: _______________
+
+### 权限边界
+- [ ] 仅内部讨论
+- [ ] 可用于研究设计讨论
+- [ ] 可用于外发材料
+NDA/保密约束: _______________
+
+提供人: _______________
+日期: _______________`
+            },
+            dio: {
+                title: 'DIO 模型可行性模板',
+                content: `## DIO 模型可行性信息
+
+### SOP 信息
+SOP 标题: _______________
+版本号: _______________
+Owner: _______________
+日期: _______________
+范围描述: _______________
+
+### 动物来源
+供应商: _______________
+品种: _______________
+年龄范围: _______________
+性别: _______________
+基线健康标准: _______________
+
+### 当前库存
+现有 DIO 动物数量: _______________
+可用于研究的数量: _______________
+预计补充周期: _______________
+
+### DIO 诱导方案
+诱导饮食: _______________
+诱导周期: _______________
+成功标准: _______________
+成功率: _______________%
+
+### 基线表型数据
+平均体重: _______________kg (SD: ___)
+BCS 范围: _______________
+体脂率（如有）: _______________%
+空腹血糖: _______________mg/dL
+果糖胺: _______________μmol/L
+
+### 福利管理
+监测频率: _______________
+体重下限阈值: _______________
+救援干预标准: _______________
+兽医审批状态: [ ] 已获批 [ ] 待审批 [ ] 无
+
+### 已知限制/风险
+_______________
+
+提供人: _______________
+角色: _______________
+日期: _______________`
+            },
+            assay: {
+                title: '样本和检测链条模板',
+                content: `## 样本和检测链条信息
+
+### 采血 SOP
+SOP 标题: _______________
+单次最大采血量: _______________mL
+最小间隔: _______________
+压力最小化措施: _______________
+
+### 血糖检测
+方法/平台: _______________
+参考范围: _______________mg/dL
+周转时间: _______________
+
+### 果糖胺检测
+方法/平台: _______________
+猫种属验证: [ ] 已验证 [ ] 待验证 [ ] 无
+敏感性/特异性: _______________
+周转时间: _______________
+
+### 胰岛素检测
+方法: _______________
+猫种属验证: [ ] 已验证 [ ] 待验证 [ ] 无
+检测范围: _______________
+周转时间: _______________
+
+### qPCR 工作流（如需要）
+RNA 提取方法: _______________
+QC 标准 (RIN/260:280): _______________
+目标基因引物验证状态:
+- 基因1: _____ [ ] 已验证 [ ] 待验证
+- 基因2: _____ [ ] 已验证 [ ] 待验证
+内参基因: _______________
+
+### 组织取样（如需要）
+可取组织类型: [ ] 肝脏 [ ] 脂肪 [ ] 肌肉 [ ] 其他: _____
+保存方法: _______________
+
+提供人: _______________
+角色: _______________
+日期: _______________`
+            },
+            stats: {
+                title: '统计设计模板',
+                content: `## 统计和数据设计
+
+### 终点层级
+主要终点: _______________
+关键次要终点: _______________
+探索性终点: _______________
+
+### 样本量依据
+效应量假设: _______________
+变异来源: [ ] 历史数据 [ ] Pilot [ ] 文献 [ ] 估计
+Power: _______________%
+Alpha: _______________
+计算的样本量: _______________/组
+
+### 分组设计
+分组数: _______________
+分组描述:
+- 组1: _______________
+- 组2: _______________
+- 组3: _______________
+
+### 随机化/盲法
+随机化方法: _______________
+盲法级别: [ ] 开放 [ ] 单盲 [ ] 双盲
+
+### 数据处理
+缺失值处理: _______________
+异常值规则: _______________
+分析软件: _______________
+
+统计审核人: _______________
+日期: _______________`
+            },
+            expert: {
+                title: '专家审核模板',
+                content: `## 专家审核记录
+
+审核人: _______________
+角色/专业: _______________
+资质: _______________
+审核日期: _______________
+
+### 审核范围
+- [ ] 科学分类确认
+- [ ] 疾病边界审核
+- [ ] 终点设计审核
+- [ ] 可行性审核
+- [ ] 其他: _______________
+
+### 审核意见
+
+分类是否正确: [ ] 是 [ ] 否 [ ] 需修改
+如需修改，建议: _______________
+
+终点设计意见:
+_______________
+
+风险/注意事项:
+_______________
+
+### 审核结论
+- [ ] 通过，可继续
+- [ ] 通过，需小修改
+- [ ] 不通过，需重大修改
+- [ ] 不通过，方向问题
+
+签名: _______________
+日期: _______________`
+            },
+            pricing: {
+                title: '定价输入模板',
+                content: `## 定价和 Protocol 输入
+
+### 成本结构
+动物单价: _______________
+日均饲养成本: _______________
+检测包价格:
+- 基础血液: _______________
+- 果糖胺: _______________
+- 胰岛素: _______________
+- qPCR (per gene): _______________
+
+### 设施容量
+当前可用笼位: _______________
+最早可开始日期: _______________
+预计完成周期: _______________
+
+### 检测周转
+血液检测: _______________工作日
+qPCR: _______________工作日
+组织病理: _______________工作日
+
+### 报告/QA
+报告模板: [ ] 有 [ ] 无
+QA 流程: _______________
+最终报告周期: _______________
+
+提供人: _______________
+日期: _______________`
+            }
+        };
+
+        function showTemplate(type) {
+            const template = templates[type];
+            document.getElementById('templateTitle').textContent = template.title;
+            document.getElementById('templateContent').innerHTML = `<pre style="white-space: pre-wrap; font-family: Monaco, monospace; font-size: 13px; background: #f8f9fa; padding: 16px; border-radius: 8px;">${template.content}</pre>`;
+            document.getElementById('templateModal').classList.remove('hidden');
+            document.getElementById('templateModal').style.display = 'flex';
+        }
+
+        function closeTemplate() {
+            document.getElementById('templateModal').classList.add('hidden');
+            document.getElementById('templateModal').style.display = 'none';
+        }
+
+        function copyTemplate() {
+            const content = document.getElementById('templateContent').textContent;
+            navigator.clipboard.writeText(content).then(() => {
+                alert('模板已复制到剪贴板');
+            });
+        }
+
+        function downloadMaterialsGuide() {
+            window.open('materials-collection-guide.md', '_blank');
+            alert('请打开 materials-collection-guide.md 查看完整的材料收集指南');
+        }
+
+        // Experts Data
+        let experts = JSON.parse(localStorage.getItem('sdcopilot_experts') || '[]');
+
+        // Default experts from profile intake
+        if (experts.length === 0) {
+            experts = [
+                { id: '1', role: '主笔专家', name: 'Lisa Freeman', credentials: 'DVM, PhD, DACVIM (Nutrition)', responsibilities: '科学分类、肥胖/营养/代谢模型边界、BCS/MCS、终点分层', verified: false },
+                { id: '2', role: '内分泌顾问', name: 'Stijn Niessen', credentials: 'DVM, PhD, DECVIM-CA', responsibilities: '猫糖尿病、胰岛素抵抗、糖代谢终点、避免肥胖误写成糖尿病', verified: false },
+                { id: '3', role: '转化药效顾问', name: '待确定', credentials: 'Oligonucleotide / GalNAc siRNA 经验', responsibilities: '靶组织、PK/PD、单次给药窗口、KD终点、RT-qPCR', verified: false },
+                { id: '4', role: '国内总框架/营养肥胖专家', name: '夏兆飞｜中国农业大学动物医学院', credentials: '中国兽医协会兽医临床营养（小动物）专科委员会主任委员', responsibilities: 'DIO 模型分类、BCS/MCS、营养干预、国内 CRO 可接受表达', verified: false },
+                { id: '5', role: '国内内分泌/实验室诊断专家', name: '王姜维｜上海蓝石宠物医院', credentials: '中国兽医协会小动物相关专科医师，内分泌与实验室诊断方向', responsibilities: '糖尿病模型边界、血糖/果糖胺/胰岛素解读、临床症状证据链', verified: false },
+                { id: '6', role: '国内 GalNAc/siRNA 转化药理专家', name: '梁子才｜瑞博生物', credentials: '小核酸药物研发与 GalNAc 递送平台经验', responsibilities: 'GalNAc 递送、靶基因 KD、PK/PD、跨物种转化边界', verified: false }
+            ];
+            localStorage.setItem('sdcopilot_experts', JSON.stringify(experts));
+        }
+
+        const domesticDefaultExperts = [
+            { id: '4', role: '国内总框架/营养肥胖专家', name: '夏兆飞｜中国农业大学动物医学院', credentials: '中国兽医协会兽医临床营养（小动物）专科委员会主任委员', responsibilities: 'DIO 模型分类、BCS/MCS、营养干预、国内 CRO 可接受表达', verified: false },
+            { id: '5', role: '国内内分泌/实验室诊断专家', name: '王姜维｜上海蓝石宠物医院', credentials: '中国兽医协会小动物相关专科医师，内分泌与实验室诊断方向', responsibilities: '糖尿病模型边界、血糖/果糖胺/胰岛素解读、临床症状证据链', verified: false },
+            { id: '6', role: '国内 GalNAc/siRNA 转化药理专家', name: '梁子才｜瑞博生物', credentials: '小核酸药物研发与 GalNAc 递送平台经验', responsibilities: 'GalNAc 递送、靶基因 KD、PK/PD、跨物种转化边界', verified: false }
+        ];
+
+        let expertDefaultsChanged = false;
+        domesticDefaultExperts.forEach(defaultExpert => {
+            const exists = experts.some(e => e.name === defaultExpert.name || e.id === defaultExpert.id);
+            if (!exists) {
+                experts.push(defaultExpert);
+                expertDefaultsChanged = true;
+            }
+        });
+        if (expertDefaultsChanged) {
+            localStorage.setItem('sdcopilot_experts', JSON.stringify(experts));
+        }
+
+        function updateExpertsPage() {
+            const rows = experts.map(e => `
+                <tr>
+                    <td>${e.role}</td>
+                    <td>${e.name}</td>
+                    <td>${e.credentials}</td>
+                    <td style="max-width: 200px; font-size: 13px;">${e.responsibilities}</td>
+                    <td>
+                        <span style="color: ${e.verified ? 'var(--success)' : 'var(--warning)'}; font-weight: 500;">
+                            ${e.verified ? '✓ 已验证' : '⏳ 待验证'}
+                        </span>
+                    </td>
+                    <td>
+                        <button class="btn btn-sm btn-secondary" onclick="toggleExpertVerification('${e.id}')">
+                            ${e.verified ? '取消验证' : '标记已验证'}
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+
+            document.getElementById('expertsTableBody').innerHTML = rows;
+
+            // Update review tasks
+            const tasks = intakes.filter(i => i.outputLevel !== 'L0').map(i => {
+                const axisALabel = axisALabels[i.axisA] || 'Unknown';
+                const axisBLabel = axisBLabels[i.axisB] || 'Unknown';
+                const workflow = getEffectiveWorkflow(i);
+                const pendingGates = getReviewGateStatus(i).filter(g => !g.done);
+                return `
+                    <div class="material-item">
+                        <div class="material-info">
+                            <div class="material-name">${i.id}</div>
+                            <div class="material-desc">${axisALabel} + ${axisBLabel}</div>
+                            <div style="font-size: 12px; color: var(--text-light); margin-top: 4px;">
+                                ${domainRouteLabels[workflow.domainRoute]} · ${deliverableTypeLabels[workflow.deliverableType]}
+                            </div>
+                            <div style="font-size: 12px; color: var(--warning); margin-top: 4px;">
+                                待审核：${pendingGates.length > 0 ? pendingGates.map(g => g.label).join('、') : '无'}
+                            </div>
+                        </div>
+                        <span class="material-status ${pendingGates.length > 0 ? 'status-missing' : 'status-provided'}">${pendingGates.length > 0 ? '待审核' : '已完成'}</span>
+                    </div>
+                `;
+            });
+
+            if (tasks.length > 0) {
+                document.getElementById('reviewTasks').innerHTML = tasks.join('');
+            }
+        }
+
+        function toggleExpertVerification(id) {
+            const expert = experts.find(e => e.id === id);
+            if (expert) {
+                expert.verified = !expert.verified;
+                localStorage.setItem('sdcopilot_experts', JSON.stringify(experts));
+                updateExpertsPage();
+            }
+        }
+
+        function addExpert() {
+            const name = prompt('专家姓名:');
+            if (!name) return;
+            const role = prompt('角色 (如: 营养专家, 内分泌顾问):') || 'Consultant';
+            const credentials = prompt('资质 (如: DVM, PhD):') || '';
+            const responsibilities = prompt('职责:') || '';
+
+            experts.push({
+                id: String(Date.now()),
+                role,
+                name,
+                credentials,
+                responsibilities,
+                verified: false
+            });
+            localStorage.setItem('sdcopilot_experts', JSON.stringify(experts));
+            updateExpertsPage();
+        }
+
+        // Message Generation
+        const messageTemplates = {
+            'bd': {
+                role: 'BD / Sponsor Lead',
+                subject: '需要确认 — {intake_id} Sponsor 信息',
+                focus: ['靶点基因', '作用机制', '预期 claim', 'PK/PD 数据', '权限边界']
+            },
+            'study-director': {
+                role: 'Study Director / Animal Facility',
+                subject: '需要确认 — {intake_id} 模型可行性',
+                focus: ['DIO SOP', '动物来源和可用性', '群体标准', '表型数据', '福利阈值']
+            },
+            'operations': {
+                role: 'Operations / Finance',
+                subject: '需要确认 — {intake_id} 定价输入',
+                focus: ['动物单价', '研究成本结构', '设施容量', '周转时间']
+            },
+            'expert': {
+                role: 'Scientific Expert',
+                subject: '需要审核 — {intake_id} 科学分类',
+                focus: ['分类确认', '疾病边界', '终点设计', '可行性评估']
+            },
+            'assay': {
+                role: 'Assay Lead / Lab Ops',
+                subject: '需要确认 — {intake_id} 检测链条',
+                focus: ['采血 SOP', '检测方法验证', 'qPCR 工作流', '组织取样']
+            },
+            'statistician': {
+                role: 'Statistician',
+                subject: '需要确认 — {intake_id} 统计设计',
+                focus: ['终点层级', '样本量依据', '随机化方案', '数据处理规则']
+            }
+        };
+
+        function updateMessagesPage() {
+            const select = document.getElementById('msgIntakeSelect');
+            select.innerHTML = '<option value="">请选择...</option>' +
+                intakes.map(i => `<option value="${i.id}">${i.id} - ${axisALabels[i.axisA] || 'Unknown'}</option>`).join('');
+        }
+
+        function updateMessagePreview() {
+            const intakeId = document.getElementById('msgIntakeSelect').value;
+            const roleKey = document.getElementById('msgRoleSelect').value;
+
+            if (!intakeId || !roleKey) {
+                document.getElementById('messagePreview').textContent = '请先选择 Intake 和目标角色';
+                return;
+            }
+
+            const intake = intakes.find(i => i.id === intakeId);
+            const template = messageTemplates[roleKey];
+
+            if (!intake || !template) return;
+
+            const message = generateMessage(intake, template, roleKey);
+            document.getElementById('messagePreview').textContent = message;
+        }
+
+        function generateMessage(intake, template, roleKey) {
+            const date = new Date().toISOString().slice(0, 10);
+            const axisALabel = axisALabels[intake.axisA] || 'Not provided';
+            const axisBLabel = axisBLabels[intake.axisB] || 'Not provided';
+            const workflow = getEffectiveWorkflow(intake);
+            const gateStatus = getReviewGateStatus(intake);
+            const workflowWarnings = generateWorkflowWarnings(intake);
+
+            let message = `Subject: ${template.subject.replace('{intake_id}', intake.id)}
+
+Hi,
+
+收到一个需要 ${template.role} 确认的需求：
+
+## 基本信息
+
+Intake ID: ${intake.id}
+创建日期: ${new Date(intake.createdAt).toLocaleDateString()}
+当前层级: ${intake.outputLevel}
+外发状态: 不可外发
+
+## 双轴分类
+
+| 轴 | 分类 |
+|---|-----|
+| 科学疾病/代谢状态 | ${axisALabel} |
+| CRO 业务交付类型 | ${axisBLabel} |
+
+## 业务路由
+
+| 字段 | 判断 |
+|---|---|
+| Study Intent | ${studyIntentLabels[workflow.studyIntent] || 'Not provided'} |
+| Domain Router | ${domainRouteLabels[workflow.domainRoute] || 'Not provided'} |
+| Deliverable Type | ${deliverableTypeLabels[workflow.deliverableType] || 'Not provided'} |
+
+## 原始问题
+
+${intake.question}
+
+## 候选物信息
+
+| 字段 | 值 |
+|-----|-----|
+| 类型 | ${intake.candidateType || 'Not provided'} |
+| 给药途径 | ${intake.route || 'Not provided'} |
+| 靶点 | ${intake.target || 'Not provided'} |
+
+## 需要确认的信息
+
+`;
+
+            template.focus.forEach((item, idx) => {
+                message += `${idx + 1}. ${item}: Not provided\n`;
+            });
+
+            message += `
+## 审核节点
+
+${gateStatus.map(g => `- ${g.done ? 'Done' : 'Pending'}: ${g.label}`).join('\n')}
+
+## 业务规则提醒
+
+${workflowWarnings.length > 0 ? workflowWarnings.map(w => `- ${w}`).join('\n') : '- No additional workflow warning generated.'}
+`;
+
+            message += `
+## 回复格式
+
+请按以下格式回复每项材料：
+
+Material: [材料名称]
+Material class: Class A expert reference / Class B internal execution evidence
+Owner: [责任人]
+Date/version: [日期/版本]
+Permission status: [Internal only / External-cleared]
+Exact claim supported: [具体支持什么claim]
+Boundary: [不支持什么]
+
+## 重要边界
+
+`;
+
+            if (roleKey === 'bd') {
+                message += `- 根据项目分类规则，需要确认 sponsor 的预期 claim
+- 如果是 GalNAc/小核酸，单次给药设计方向通常是机制验证，不是糖尿病治疗
+- 没有 sponsor 授权前，候选物信息仅限内部使用`;
+            } else if (roleKey === 'study-director') {
+                message += `- DIO 肥胖猫 ≠ 稳定临床糖尿病猫
+- 在有真实材料之前，不能对外声称具有 DIO 模型能力
+- 动物数量、表型数据必须来自真实数据，不能编造`;
+            } else if (roleKey === 'operations') {
+                message += `- 在 Study Director 确认模型可行性之前，不需要提供具体报价
+- 报价需要明确的研究范围定义才能计算
+- 不能提供估计值或假设值`;
+            } else if (roleKey === 'expert') {
+                message += `- Class A 专家审核材料支持科学分类和风险解读
+- Class A 不能替代 Class B 内部执行证据（SOP、动物、检测、定价）
+- 专家姓名未验证前不能在外发材料中引用`;
+            } else {
+                message += `- 所有材料必须有真实来源
+- 缺失材料标注 "Not provided"
+- 不能编造任何数据`;
+            }
+
+            message += `
+
+Thanks.
+
+---
+Generated by Study Design Copilot | ${date}
+`;
+
+            return message;
+        }
+
+        function copyMessage() {
+            const message = document.getElementById('messagePreview').textContent;
+            if (message && message !== '请先选择 Intake 和目标角色') {
+                navigator.clipboard.writeText(message).then(() => {
+                    alert('消息已复制到剪贴板');
+                });
+            }
+        }
+
+        function generateAllMessages(roleKey) {
+            const template = messageTemplates[roleKey];
+            const pendingIntakes = intakes.filter(i => i.outputLevel !== 'L0');
+
+            if (pendingIntakes.length === 0) {
+                alert('没有待处理的 Intake');
+                return;
+            }
+
+            const allMessages = pendingIntakes.map(intake => {
+                return '=' .repeat(60) + '\n' + generateMessage(intake, template, roleKey);
+            }).join('\n\n');
+
+            navigator.clipboard.writeText(allMessages).then(() => {
+                alert(`已生成并复制 ${pendingIntakes.length} 条 ${template.role} 请求消息`);
+            });
+        }
+
+        // Load seed data if empty
+        async function loadSeedData() {
+            if (intakes.length === 0) {
+                try {
+                    const response = await fetch('seed-data.json');
+                    const data = await response.json();
+                    if (data.intakes && data.intakes.length > 0) {
+                        intakes = data.intakes;
+                        localStorage.setItem('sdcopilot_intakes', JSON.stringify(intakes));
+                        if (data.experts) {
+                            experts = data.experts;
+                            localStorage.setItem('sdcopilot_experts', JSON.stringify(experts));
+                        }
+                        updateDashboard();
+                        updateExpertsPage();
+                        updateMessagesPage();
+                        console.log('Seed data loaded');
+                    }
+                } catch (e) {
+                    console.log('No seed data or failed to load');
+                }
+            }
+        }
+
+        // Initialize
+        updateDashboard();
+        updateMaterialsPage();
+        updateExpertsPage();
+        updateMessagesPage();
+        loadSeedData();
+    </script>
+</body>
+</html>
