@@ -141,7 +141,10 @@
                         <div class="text-lg font-semibold" id="summaryTitle">初步判断已生成</div>
                         <div class="text-blue-100 text-sm" id="summaryStats">正在分析...</div>
                     </div>
-                    <div class="flex gap-2">
+                    <div class="flex flex-wrap gap-2">
+                        <button onclick="scrollToDecisionPath()" class="bg-white text-blue-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-50">
+                            查看决策路径
+                        </button>
                         <button onclick="scrollToEmail()" class="bg-white text-blue-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-50">
                             查看建议沟通内容 ↓
                         </button>
@@ -173,6 +176,39 @@
                 <div class="p-4">
                     <div id="workflowSummary" class="space-y-4">
                         <!-- Dynamically filled -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Decision Path -->
+            <div id="decisionPathSection" class="bg-white rounded-lg shadow-sm border border-gray-200 mb-6 hidden">
+                <span id="decision-path" class="sr-only">决策路径</span>
+                <div class="p-4 border-b border-gray-200 flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                        <h2 class="font-semibold text-gray-800">决策路径</h2>
+                        <p class="text-sm text-gray-500">把当前判断拆成可回看、可 double-check 的步骤</p>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        <button onclick="copyDecisionPathLink()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium">
+                            复制路径链接
+                        </button>
+                        <button onclick="doubleCheckDecision()" class="bg-slate-800 hover:bg-slate-900 text-white px-4 py-2 rounded-lg text-sm font-medium">
+                            双重确认
+                        </button>
+                    </div>
+                </div>
+                <div class="p-4 grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <div class="border border-gray-200 rounded-lg p-4 bg-slate-50">
+                        <div class="font-semibold text-slate-800 mb-3">路径步骤</div>
+                        <div id="decisionPathList" class="space-y-3">
+                            <!-- Dynamically filled -->
+                        </div>
+                    </div>
+                    <div class="border border-gray-200 rounded-lg p-4">
+                        <div class="font-semibold text-gray-800 mb-3">双重确认面板</div>
+                        <div id="decisionCheckPanel" class="space-y-3 text-sm text-gray-700">
+                            <!-- Dynamically filled -->
+                        </div>
                     </div>
                 </div>
             </div>
@@ -640,6 +676,168 @@
                 </div>
             `).join('');
         }
+
+        function renderDecisionPath(result) {
+            const workflow = inferDecisionWorkflow(result);
+            const pe = getParsedElements(result);
+            const missing = result.missing_critical || result.missing_fields || [];
+            const risks = result.risk_flags || [];
+            const decisionCheck = result.decision_check || {};
+            const checkedAt = decisionCheck.checked_at ? new Date(decisionCheck.checked_at).toLocaleString() : null;
+
+            const steps = [
+                {
+                    title: '识别输入',
+                    detail: `药物类型 ${publicValue(pe.drug_type)}，靶基因 ${publicValue(pe.target_gene)}。`,
+                    status: '已读取'
+                },
+                {
+                    title: '判断业务分流',
+                    detail: `${WORKFLOW_LABELS.studyIntent[workflow.studyIntent] || workflow.studyIntent} → ${WORKFLOW_LABELS.domainRoute[workflow.domainRoute] || workflow.domainRoute}。`,
+                    status: '已分流'
+                },
+                {
+                    title: '标记风险与缺口',
+                    detail: `${risks.length} 项风险，${missing.length} 项待确认。`,
+                    status: (risks.length + missing.length) > 0 ? '需要关注' : '通过'
+                },
+                {
+                    title: '选择当前输出',
+                    detail: `当前输出是 ${WORKFLOW_LABELS.deliverableType[workflow.deliverableType] || workflow.deliverableType}。`,
+                    status: '已生成'
+                },
+                {
+                    title: '用户 double-check',
+                    detail: decisionCheck.confirmed
+                        ? `已完成双重确认${checkedAt ? `，时间 ${checkedAt}` : ''}。`
+                        : '用户可以重新核对路径，确认当前判断是否需要继续、修改或暂停。',
+                    status: decisionCheck.confirmed ? '已确认' : '待确认'
+                }
+            ];
+
+            const stepHtml = steps.map((step, index) => {
+                const tone = index < 3
+                    ? 'border-slate-200 bg-white'
+                    : index === 3
+                        ? 'border-blue-200 bg-blue-50'
+                        : decisionCheck.confirmed
+                            ? 'border-emerald-200 bg-emerald-50'
+                            : 'border-amber-200 bg-amber-50';
+                const badge = index === 4
+                    ? decisionCheck.confirmed
+                        ? 'bg-emerald-100 text-emerald-700'
+                        : 'bg-amber-100 text-amber-700'
+                    : index === 2 && (risks.length + missing.length) > 0
+                        ? 'bg-amber-100 text-amber-700'
+                        : 'bg-slate-100 text-slate-700';
+
+                return `
+                    <div class="border rounded-lg p-3 ${tone}">
+                        <div class="flex items-start justify-between gap-3">
+                            <div>
+                                <div class="font-semibold text-slate-800">${index + 1}. ${step.title}</div>
+                                <div class="text-sm text-slate-600 mt-1">${step.detail}</div>
+                            </div>
+                            <span class="px-2 py-0.5 rounded text-xs font-medium ${badge}">${step.status}</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            const checks = [
+                '用户是否理解当前判断的输入边界。',
+                '缺失材料是否被误当成事实。',
+                '当前输出是否过早进入正式方案。',
+                '是否需要人工复核后再继续。'
+            ];
+
+            document.getElementById('decisionPathSection').classList.remove('hidden');
+            document.getElementById('decisionPathList').innerHTML = stepHtml;
+            document.getElementById('decisionCheckPanel').innerHTML = `
+                <div class="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                    <div class="font-semibold text-slate-800">双重确认检查点</div>
+                    <div class="mt-2 space-y-2">
+                        ${checks.map(item => `<div>• ${item}</div>`).join('')}
+                    </div>
+                </div>
+                <div class="rounded-lg border ${decisionCheck.confirmed ? 'border-emerald-200 bg-emerald-50' : 'border-amber-200 bg-amber-50'} p-3">
+                    <div class="font-semibold ${decisionCheck.confirmed ? 'text-emerald-800' : 'text-amber-800'}">当前确认状态</div>
+                    <div class="mt-1 text-sm ${decisionCheck.confirmed ? 'text-emerald-700' : 'text-amber-700'}">
+                        ${decisionCheck.confirmed
+                            ? `已完成双重确认${checkedAt ? `，时间 ${checkedAt}` : ''}。`
+                            : '还没有做双重确认。当前路径会保留为草案状态，直到用户本人点确认。'}
+                    </div>
+                    ${decisionCheck.reason ? `
+                        <div class="mt-2 text-xs ${decisionCheck.confirmed ? 'text-emerald-600' : 'text-amber-600'}">
+                            确认理由：${decisionCheck.reason}
+                        </div>
+                    ` : ''}
+                </div>
+                <div class="rounded-lg border border-gray-200 bg-white p-3 text-sm text-gray-700">
+                    <div class="font-semibold text-gray-800 mb-1">操作说明</div>
+                    <div>如果你现在就要继续，点右上角“双重确认”。系统会用当前输入重新跑一遍本地规则，然后把确认状态写回历史记录。</div>
+                </div>
+            `;
+
+            if (window.location.hash === '#decision-path') {
+                setTimeout(() => scrollToDecisionPath(), 0);
+            }
+        }
+
+        function updateLatestHistoryDecision(decisionCheck) {
+            if (parseHistory.length === 0) return;
+
+            parseHistory[0] = {
+                ...parseHistory[0],
+                decision_confirmed: !!decisionCheck?.confirmed,
+                decision_checked_at: decisionCheck?.checked_at || null
+            };
+            localStorage.setItem('intakeParser_history', JSON.stringify(parseHistory));
+            renderHistory();
+        }
+
+        function decisionFingerprint(result) {
+            const pe = getParsedElements(result);
+            const workflow = inferDecisionWorkflow(result);
+            return JSON.stringify({
+                study_intent: pe.study_intent || null,
+                domain_route: workflow.domainRoute,
+                deliverable_type: workflow.deliverableType,
+                missing: result.missing_critical || result.missing_fields || [],
+                risks: result.risk_flags || [],
+                recommendation: result.model_recommendation?.recommended || null
+            });
+        }
+
+        function doubleCheckDecision() {
+            if (!currentResult) {
+                showToast('请先生成初步判断', true);
+                return;
+            }
+
+            const input = document.getElementById('requestInput')?.value.trim() || currentResult.raw_request || '';
+            if (!input) {
+                showToast('没有可复核的输入', true);
+                return;
+            }
+
+            const refreshedResult = buildLocalRuleResult(input, 'User requested double-check');
+            const before = decisionFingerprint(currentResult);
+            const after = decisionFingerprint(refreshedResult);
+            const changed = before !== after;
+
+            refreshedResult.decision_check = {
+                confirmed: true,
+                checked_at: new Date().toISOString(),
+                reason: changed ? 'Double-check发现路径有变化，已用最新规则结果覆盖。' : 'Double-check与当前路径一致。'
+            };
+
+            currentResult = refreshedResult;
+            displayResults(refreshedResult);
+            updateLatestHistoryDecision(refreshedResult.decision_check);
+            showToast(changed ? '双重确认完成，路径已更新' : '双重确认完成');
+            setAIStatus(refreshedResult.decision_check.reason, 'success');
+        }
         // Toast
         function showToast(message, isError = false) {
             const toast = document.getElementById('toast');
@@ -849,6 +1047,29 @@
             document.getElementById('clarificationEmail')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
 
+        function scrollToDecisionPath() {
+            const section = document.getElementById('decisionPathSection');
+            if (!section || section.classList.contains('hidden')) {
+                showToast('请先生成初步判断，再查看决策路径', true);
+                return;
+            }
+
+            if (window.location.hash !== '#decision-path') {
+                history.replaceState(null, '', `${window.location.pathname}${window.location.search}#decision-path`);
+            }
+            section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        async function copyDecisionPathLink() {
+            const url = `${window.location.origin}${window.location.pathname}${window.location.search}#decision-path`;
+            try {
+                await navigator.clipboard.writeText(url);
+                showToast('决策路径链接已复制');
+            } catch (e) {
+                showToast('复制失败，请手动复制地址栏链接', true);
+            }
+        }
+
         function updateResultsSummary(result) {
             const pe = getParsedElements(result);
             const missing = result.missing_critical || result.missing_fields || [];
@@ -931,6 +1152,7 @@
             // Decision workflow and expert cross-checks are deterministic fallbacks.
             // They must render even when the model response omits these newer fields.
             renderDecisionWorkflow(result);
+            renderDecisionPath(result);
             renderInternationalExpertCheck(result);
             renderDomesticExpertCheck(result);
 
@@ -1075,7 +1297,9 @@ ${missing.map(m => `- ${m}`).join('\n')}` : ''}
                 input: input.substring(0, 100) + (input.length > 100 ? '...' : ''),
                 drug_type: pe.drug_type,
                 study_intent: pe.study_intent,
-                gaps: missing.length
+                gaps: missing.length,
+                decision_confirmed: result.decision_check?.confirmed === true,
+                decision_checked_at: result.decision_check?.checked_at || null
             };
             parseHistory.unshift(entry);
             if (parseHistory.length > 20) parseHistory = parseHistory.slice(0, 20);
@@ -1094,7 +1318,7 @@ ${missing.map(m => `- ${m}`).join('\n')}` : ''}
                     <div>
                         <div class="text-sm font-medium text-gray-800">${h.input}</div>
                         <div class="text-xs text-gray-500 mt-1">
-                            ${publicValue(h.drug_type)} | ${publicValue(h.study_intent)} | ${h.gaps} 项需确认
+                            ${publicValue(h.drug_type)} | ${publicValue(h.study_intent)} | ${h.gaps} 项需确认${h.decision_confirmed ? ' | 已双重确认' : ''}
                         </div>
                     </div>
                     <div class="text-xs text-gray-400">${new Date(h.timestamp).toLocaleDateString()}</div>
@@ -1125,6 +1349,10 @@ ${missing.map(m => `- ${m}`).join('\n')}` : ''}
         function clearInput() {
             document.getElementById('requestInput').value = '';
             document.getElementById('resultsSection').classList.add('hidden');
+            document.getElementById('decisionPathSection').classList.add('hidden');
+            if (window.location.hash === '#decision-path') {
+                history.replaceState(null, '', `${window.location.pathname}${window.location.search}`);
+            }
             currentResult = null;
         }
 
