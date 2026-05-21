@@ -1055,13 +1055,25 @@
             }
 
             if (window.location.hash !== '#decision-path') {
-                history.replaceState(null, '', `${window.location.pathname}${window.location.search}#decision-path`);
+                const url = new URL(window.location.href);
+                url.hash = 'decision-path';
+                history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`);
             }
             section.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
 
+        function buildDecisionPathUrl() {
+            const url = new URL(window.location.href);
+            const input = currentResult?.raw_request || document.getElementById('requestInput')?.value.trim() || '';
+            if (input) {
+                url.searchParams.set('request', input);
+            }
+            url.hash = 'decision-path';
+            return url.toString();
+        }
+
         async function copyDecisionPathLink() {
-            const url = `${window.location.origin}${window.location.pathname}${window.location.search}#decision-path`;
+            const url = buildDecisionPathUrl();
             try {
                 await navigator.clipboard.writeText(url);
                 showToast('决策路径链接已复制');
@@ -1350,8 +1362,11 @@ ${missing.map(m => `- ${m}`).join('\n')}` : ''}
             document.getElementById('requestInput').value = '';
             document.getElementById('resultsSection').classList.add('hidden');
             document.getElementById('decisionPathSection').classList.add('hidden');
-            if (window.location.hash === '#decision-path') {
-                history.replaceState(null, '', `${window.location.pathname}${window.location.search}`);
+            if (window.location.hash === '#decision-path' || new URLSearchParams(window.location.search).has('request')) {
+                const url = new URL(window.location.href);
+                url.searchParams.delete('request');
+                url.hash = '';
+                history.replaceState(null, '', `${url.pathname}${url.search}`);
             }
             currentResult = null;
         }
@@ -1360,8 +1375,17 @@ ${missing.map(m => `- ${m}`).join('\n')}` : ''}
             document.getElementById('requestInput').value = `我们的需求是猫咪的糖尿病模型。药物类型：GalNAc小核酸类；靶基因：ANGPTL3；给药方案：皮下注射；给药剂量：待定。先按单次给药。请同时说明 DIO 肥胖猫资源、动物身体数据和粗略报价能否提供。`;
         }
 
+        function loadRequestFromUrl() {
+            const request = new URLSearchParams(window.location.search).get('request');
+            if (!request) return;
+
+            document.getElementById('requestInput').value = request;
+            parseRequest();
+        }
+
         // Initialize
         renderHistory();
+        loadRequestFromUrl();
     </script>
 </body>
 </html>
