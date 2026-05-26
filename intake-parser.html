@@ -298,6 +298,9 @@
                         <button onclick="copyDecisionPathLink()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium">
                             复制路径链接
                         </button>
+                        <button onclick="copyDecisionArtifact()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium">
+                            复制审计记录
+                        </button>
                         <button onclick="doubleCheckDecision()" class="bg-slate-800 hover:bg-slate-900 text-white px-4 py-2 rounded-lg text-sm font-medium">
                             双重确认
                         </button>
@@ -629,8 +632,8 @@
         const LEVEL_INFO = {
             L0: { label: '信息不足', desc: '仅询问，不进入流程', action: '记录，请求更多信息' },
             L1: { label: '需补材料', desc: '需要内部路由或材料补充', action: '补材料后重新评估' },
-            L2: { label: '可评估', desc: '模型适配评估可以开始', action: '进入 Phase 1 知识库准备' },
-            L3: { label: '完整需求', desc: '完整方案需求', action: '进入 Phase 1 知识库准备' }
+            L2: { label: '模型适配', desc: '只能进入 model-fit memo / assessment', action: '进入 Phase 1 知识库准备，但不生成 protocol' },
+            L3: { label: '方案草案', desc: '可进入 protocol draft，不是可执行方案', action: '进入 Phase 1-4 生成草案；执行前仍需 Class B evidence + 真人审核' }
         };
 
         // 现有字段 → Axis B 映射
@@ -799,6 +802,16 @@
             };
             const gateStyle = gateStyles[level];
             const canProceed = (level === 'L2' || level === 'L3');
+            const gateLabel = level === 'L2'
+                ? '可以进入模型适配评估'
+                : level === 'L3'
+                    ? '可以进入方案草案流程'
+                    : '需要先补充信息';
+            const nextStep = level === 'L2'
+                ? '可以开始 Phase 1 知识库准备，但产出限制为 model-fit memo / assessment。不要直接写 protocol、动物数量或报价。'
+                : level === 'L3'
+                    ? '可以开始 Phase 1-4，产出 protocol draft。正式外发或执行前必须有 Sponsor package、Class B 内部执行材料和真人审核。'
+                    : '请根据上方的"风险与缺口"部分补充所需信息后，重新评估。';
 
             document.getElementById('matrixGateAction').className = `mt-4 p-4 rounded-lg border ${gateStyle.bg}`;
             document.getElementById('matrixGateAction').innerHTML = `
@@ -806,20 +819,14 @@
                     <span class="text-2xl">${gateStyle.icon}</span>
                     <div class="flex-1">
                         <div class="font-semibold ${gateStyle.text} mb-1">
-                            Gate 判断: ${canProceed ? '可以进入后续流程' : '需要先补充信息'}
+                            Gate 判断: ${gateLabel}
                         </div>
                         <div class="text-sm ${gateStyle.text}">
                             ${levelInfo.action}
                         </div>
-                        ${!canProceed ? `
-                            <div class="mt-2 text-sm ${gateStyle.text}">
-                                <strong>下一步:</strong> 请根据上方的"风险与缺口"部分补充所需信息后，重新评估。
-                            </div>
-                        ` : `
-                            <div class="mt-2 text-sm ${gateStyle.text}">
-                                <strong>下一步:</strong> 可以开始 Phase 1 知识库准备，参考 feline-research-os 相关 topic。
-                            </div>
-                        `}
+                        <div class="mt-2 text-sm ${gateStyle.text}">
+                            <strong>下一步:</strong> ${nextStep}
+                        </div>
                     </div>
                 </div>
             `;
@@ -878,7 +885,7 @@
             if (studyIntent === 'model_resource_inquiry') deliverableType = 'clarification_email';
             if (studyIntent === 'mechanism_validation' && (!pe.target_gene || pe.target_gene === 'null')) deliverableType = 'model_fit_assessment';
             if (studyIntent === 'toxicology') deliverableType = 'risk_checklist';
-            if (/报价|pricing|quote/.test(text)) deliverableType = 'quotation_structure';
+            if (/报价|pricing|quote/.test(text)) deliverableType = 'clarification_email';
             if (missing.length >= 2 || risks.length >= 2) deliverableType = deliverableType === 'quotation_structure' ? 'quotation_structure' : 'model_fit_assessment';
 
             const reviewGates = ['Scientific Review', 'BD Review'];
@@ -971,9 +978,9 @@
 
             const experts = [
                 {
-                    name: 'Lisa Freeman, DVM PhD DACVIM(Nutrition)',
-                    credentials: '塔夫茨大学卡明斯兽医学院营养学教授',
-                    subtitle: '营养/代谢专家',
+                    name: '营养/肥胖专家角色视角',
+                    credentials: 'BCS、体成分、饮食模型、体重管理边界',
+                    subtitle: '角色视角，不是专家本人审核',
                     icon: '🥗',
                     style: {
                         card: 'bg-green-50 border-green-200',
@@ -987,9 +994,9 @@
                     ]
                 },
                 {
-                    name: 'Stijn Niessen, DVM PhD DECVIM-CA',
-                    credentials: '皇家兽医学院内分泌学高级讲师',
-                    subtitle: '内分泌专家',
+                    name: '内分泌专家角色视角',
+                    credentials: '糖尿病边界、应激性高血糖、果糖胺解释',
+                    subtitle: '角色视角，不是专家本人审核',
                     icon: '🔬',
                     style: {
                         card: 'bg-purple-50 border-purple-200',
@@ -1003,9 +1010,9 @@
                     ]
                 },
                 {
-                    name: '转化药效顾问',
-                    credentials: '跨物种药理学与临床转化',
-                    subtitle: '转化药效专家',
+                    name: '转化药效专家角色视角',
+                    credentials: '跨物种药理、PK/PD、机制终点边界',
+                    subtitle: '角色视角，不是专家本人审核',
                     icon: '💊',
                     style: {
                         card: 'bg-blue-50 border-blue-200',
@@ -1033,7 +1040,7 @@
                         ${expert.checks.map(check => `<div>✓ ${check}</div>`).join('')}
                     </div>
                     <div class="mt-3 pt-3 border-t ${expert.style.border} text-xs text-gray-500">
-                        基于国际学术标准的审核视角
+                        ${expert.subtitle}。外发或执行前仍需真人 reviewer 记录。
                     </div>
                 </div>
             `).join('');
@@ -1048,8 +1055,8 @@
 
             const experts = [
                 {
-                    name: '夏兆飞',
-                    credentials: '中国农业大学动物医学院',
+                    name: '营养肥胖同行角色视角',
+                    credentials: '模型分类、DIO/肥胖边界、BCS/MCS',
                     subtitle: '营养肥胖专家 · 模型分类与适用边界',
                     icon: '🎯',
                     style: {
@@ -1064,8 +1071,8 @@
                     ]
                 },
                 {
-                    name: '王姜维',
-                    credentials: '上海蓝石宠物医院',
+                    name: '内分泌诊断同行角色视角',
+                    credentials: '糖尿病诊断证据链、检测解释边界',
                     subtitle: '内分泌专家 · 糖尿病诊断标准校验',
                     icon: '🧪',
                     style: {
@@ -1080,8 +1087,8 @@
                     ]
                 },
                 {
-                    name: '梁子才',
-                    credentials: '瑞博生物创始人、董事长兼CEO',
+                    name: 'GalNAc/siRNA 转化药理角色视角',
+                    credentials: '靶组织、KD、PD 时间窗、跨物种转化',
                     subtitle: 'GalNAc/siRNA专家 · 靶点验证与 PK-PD',
                     icon: '🧬',
                     style: {
@@ -1110,7 +1117,7 @@
                         ${expert.checks.map(check => `<div>✓ ${check}</div>`).join('')}
                     </div>
                     <div class="mt-3 pt-3 border-t ${expert.style.border} text-xs text-gray-500">
-                        ${expert.subtitle}
+                        ${expert.subtitle}。这是角色化压力测试，不是本人审核或背书。
                     </div>
                 </div>
             `).join('');
@@ -1187,7 +1194,9 @@
                 '用户是否理解当前判断的输入边界。',
                 '缺失材料是否被误当成事实。',
                 '当前输出是否过早进入正式方案。',
-                '是否需要人工复核后再继续。'
+                '是否需要人工复核后再继续。',
+                'Replay Link 只复现输入；审计级追溯需要复制审计记录。',
+                'L2 只能进入模型适配评估，L3 也只是 protocol draft，不是可执行方案。'
             ];
 
             document.getElementById('decisionPathSection').classList.remove('hidden');
@@ -1215,6 +1224,7 @@
                 <div class="rounded-lg border border-gray-200 bg-white p-3 text-sm text-gray-700">
                     <div class="font-semibold text-gray-800 mb-1">操作说明</div>
                     <div>如果你现在就要继续，点右上角“双重确认”。系统会用当前输入重新跑一遍本地规则，然后把确认状态写回历史记录。</div>
+                    <div class="mt-2 text-amber-700">路径链接适合交接和输入复现；要做审计、写 protocol 或进入专家审核，请同时复制审计记录。</div>
                 </div>
             `;
 
@@ -1511,6 +1521,42 @@
             return url.toString();
         }
 
+        function getMatrixClassification(result) {
+            if (result?._matrixClassification) return result._matrixClassification;
+            if (!result) return {};
+            const axisA = deriveAxisA(result);
+            const axisB = deriveAxisB(result);
+            return { axisA, axisB, level: getLevel(axisA, axisB) };
+        }
+
+        function buildDecisionArtifact() {
+            const result = currentResult || {};
+            const workflow = currentResult ? inferDecisionWorkflow(currentResult) : {};
+            const matrix = currentResult ? getMatrixClassification(currentResult) : {};
+            return {
+                replay_url: buildDecisionPathUrl(),
+                raw_request: result.raw_request || document.getElementById('requestInput')?.value.trim() || '',
+                captured_at: new Date().toISOString(),
+                public_intake_parser_url: `${window.location.origin}${window.location.pathname}`,
+                app_commit_or_publish_version: 'static-public-test-page',
+                taxonomy_file: 'feline-metabolic-model-taxonomy-and-cro-delivery-matrix-2026-05-11.md',
+                taxonomy_version_or_hash: 'Not provided',
+                output_level: matrix.level || 'Not provided',
+                output_boundary: matrix.level === 'L2'
+                    ? 'L2 only supports model-fit memo / assessment, not protocol generation.'
+                    : matrix.level === 'L3'
+                        ? 'L3 may support protocol draft only. Execution-ready protocol requires Class B evidence and human review.'
+                        : 'Does not enter protocol workflow.',
+                study_intent: workflow.studyIntent || 'Not provided',
+                domain_route: workflow.domainRoute || 'Not provided',
+                deliverable_type: workflow.deliverableType || 'Not provided',
+                risk_flags: result.risk_flags || [],
+                missing_critical: result.missing_critical || result.missing_fields || [],
+                decision_check: result.decision_check || { confirmed: false },
+                knowledge_base_manifest: 'Not provided'
+            };
+        }
+
         async function copyDecisionPathLink() {
             const url = buildDecisionPathUrl();
             try {
@@ -1518,6 +1564,19 @@
                 showToast('决策路径链接已复制');
             } catch (e) {
                 showToast('复制失败，请手动复制地址栏链接', true);
+            }
+        }
+
+        async function copyDecisionArtifact() {
+            if (!currentResult) {
+                showToast('请先生成初步判断，再复制审计记录', true);
+                return;
+            }
+            try {
+                await navigator.clipboard.writeText(JSON.stringify(buildDecisionArtifact(), null, 2));
+                showToast('审计记录已复制');
+            } catch (e) {
+                showToast('复制失败，请先使用现代浏览器或手动保存页面结果', true);
             }
         }
 
