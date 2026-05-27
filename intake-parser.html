@@ -1009,16 +1009,74 @@
                 ['国内模型/诊断/福利同行', 'DIO 定义、检测可解释性和福利阈值要能落地。', '加入 baseline 稳定期、样本处理、dose hold 和 withdrawal rules。']
             ];
 
-            const protocolSections = [
-                ['实验目的', '评价候选代谢改善药物在 DIO 肥胖猫或肥胖伴早期代谢异常风险猫中对体重、体成分、摄食、糖代谢和安全性的影响。'],
-                ['实验背景与依据', '基于 feline-research-os 肥胖机制、肥胖-糖尿病桥接和糖代谢终点手册：肥胖与胰岛素敏感性下降相关，但不能直接写成稳定糖尿病治疗 claim。'],
-                ['受试物', '候选物暂按 GLP-1 RA 或类似代谢改善候选物处理；molecule、route、dose、frequency、formulation 均为 TBD after sponsor package / PK-PD review。'],
-                ['实验动物', 'DIO 肥胖猫或肥胖伴早期糖代谢风险猫；动物来源、数量、BCS/MCS、体成分、baseline 表型和可用性均需内部模型材料确认。'],
-                ['实验设计', '随机、平行对照、多剂量探索性药效研究；建议 Vehicle/placebo、低剂量、高剂量、可选参照组；样本量由统计审查决定。'],
-                ['观察和评价', '主要观察体重和体成分；关键次要观察摄食量、BCS/MCS、fasting glucose、fructosamine、insulin、lipid panel 和安全实验室。'],
-                ['数据分析整理', '连续型终点建议 ANCOVA 或 mixed-effects model，baseline 作为协变量；输出 effect size、置信区间、趋势和缺失值说明。'],
-                ['动物福利和伦理', '设置日常观察、dose hold、withdrawal、人道终点和救援流程；具体阈值需 Study Director、兽医/福利 reviewer 确认。'],
-                ['大致时间安排', '可讨论 Screening、1-2 周 baseline、8-12 周给药观察、2-4 周 follow-up；这只是方案窗口，不是执行 timeline 承诺。']
+            const protocolBody = [
+                {
+                    title: '一、实验目的',
+                    body: [
+                        '本研究拟在 DIO 肥胖猫或肥胖伴早期糖代谢风险猫中，评价候选代谢改善受试物对体重、体成分、摄食量、糖代谢相关指标及安全性的影响。研究目标不是证明稳定临床糖尿病治疗疗效，而是在当前客户粗需求和可披露信息有限的条件下，形成可供 sponsor、Study Director、统计、assay 和动物福利团队继续审阅的探索性药效方案草案。',
+                        '主要目的为观察受试物相对 vehicle/placebo 是否能改善体重和体脂/体成分。次要目的为观察摄食量、BCS/MCS、fasting glucose、fructosamine、insulin、lipid panel 及安全实验室指标变化。探索目的为在机制和 assay 条件允许时，评价 target engagement、adipokine/inflammatory marker 或 CGM 等机制/动态读数。'
+                    ]
+                },
+                {
+                    title: '二、实验背景与依据',
+                    body: [
+                        'feline-research-os 的肥胖机制页将猫肥胖定义为多因素营养和代谢问题，涉及动物内在因素、日粮、环境、喂养行为、活动水平和体况评估。该证据支持本方案把体重、BCS/MCS、体成分、摄食量和日粮控制同时纳入，而不是只用体重变化代表药效。',
+                        '肥胖-糖尿病桥接页提示肥胖与胰岛素敏感性下降、葡萄糖代谢异常风险相关，但并非所有肥胖猫都会发展为糖尿病。因此本方案把糖代谢指标作为关键次要或探索终点，用于解释代谢改善方向，而不把研究写成稳定糖尿病治疗试验。',
+                        '糖尿病终点手册进一步提示 glycemic control、remission、diet response、body condition、safety 和 complication endpoints 必须分层解释。基于国内外同行评审视角，本方案保留肥胖/代谢改善定位，并要求所有剂量、动物数、SOP、assay QC 和 timeline 在真实材料到位后再锁定。'
+                    ]
+                },
+                {
+                    title: '三、受试物',
+                    body: [
+                        '当前受试物仅可按“GLP-1 RA 或类似代谢改善候选物”占位描述。真实 molecule 名称、批号、纯度/浓度、制剂、储存条件、给药途径、给药剂量、给药频率和稳定性资料均未提供，应标记为 TBD after sponsor package / PK-PD review。',
+                        '受试物进入正式方案前，应至少补充作用机制、猫或相关物种 PK/PD、安全性/耐受性、route 可行性、预期暴露窗口、剂量选择依据和停药/减量规则。不得从人、犬或啮齿类剂量直接换算为猫执行剂量。'
+                    ]
+                },
+                {
+                    title: '四、实验动物',
+                    body: [
+                        '拟用动物为 DIO 肥胖猫或肥胖伴早期糖代谢异常风险猫。入组前需确认动物来源、建模方式、年龄、性别、绝育状态、体重、BCS/MCS、体成分、摄食稳定性、基础糖代谢和健康状态。动物数量当前不得写死，应由统计样本量审查和动物资源可用性共同决定。',
+                        '入组建议包括成年猫、体况符合肥胖或 DIO 模型定义、baseline 期体重和摄食相对稳定、可完成采血/给药/体成分测量和日常观察。排除建议包括已确诊且需要临床治疗的糖尿病猫、明显厌食/呕吐/脱水/疼痛、近期使用影响体重或糖代谢药物、肝肾胰腺或血液学异常达到福利风险阈值的动物。'
+                    ]
+                },
+                {
+                    title: '五、实验设计',
+                    body: [
+                        '本研究建议采用随机、平行对照、多剂量、探索性临床前药效设计。给药前设置 screening 和 baseline 期，用于完成健康筛查、模型确认、体重/摄食稳定性判断和关键代谢指标基线采集。合格动物按 baseline 体重、BCS/体成分、糖代谢状态、性别/绝育状态和模型批次进行分层随机化。',
+                        '建议分组为：G1 vehicle/placebo 对照组，用于观察背景变化和操作影响；G2 候选物低剂量组，用于观察初步药效信号；G3 候选物高剂量组，用于观察剂量反应趋势；G4 阳性或营养参照组为可选组，仅在科学问题、伦理和业务目标支持时加入。所有 dose level 当前均为 TBD，不得作为执行剂量。'
+                    ]
+                },
+                {
+                    title: '六、观察和评价',
+                    body: [
+                        '主要评价指标建议为给药期末相对 baseline 的体重变化百分比，以及在测量流程可验证时的体脂或体成分变化。若体成分设备、SOP 或评分训练不可确认，则体成分应降级为探索终点或 TBD。',
+                        '关键次要评价包括每日摄食量和剩食、饮水、BCS/MCS、活动和一般状态、fasting glucose、fructosamine、insulin、lipid panel、CBC、serum chemistry、urinalysis 及胰腺/肝肾相关安全指标。探索评价可包括 target engagement、qPCR/蛋白表达、adipokine/inflammatory marker、CGM derived metrics、粪便或行为相关指标。',
+                        '建议访视活动包括 screening、baseline、Week 1、Week 2、Week 4、Week 8、Week 12 可选终点和 follow-up。体重、摄食、安全观察应高频记录；糖代谢和安全实验室可在 baseline、Week 4、Week 8、Week 12 和 follow-up 采集；具体采血频率需由 Study Director 和福利 reviewer 确认。'
+                    ]
+                },
+                {
+                    title: '七、数据分析整理',
+                    body: [
+                        '分析集建议包括 Safety set、Full analysis set 和 Per-protocol set。Safety set 包含至少接受一次给药的动物；Full analysis set 包含有 baseline 和至少一次 post-baseline 药效评估的动物；Per-protocol set 包含无重大方案偏差并完成主要终点评估的动物。',
+                        '连续型终点建议使用 ANCOVA 或 mixed-effects model，baseline 值作为协变量，重复测量可纳入 time、treatment 和 time-by-treatment interaction。探索性研究应报告 effect size、置信区间和方向性趋势，不只依赖 p 值。缺失值需按 welfare、technical、assay failure、withdrawal 和 other 分类，不得因结果方向删除异常值。',
+                        '数据整理建议按 animal disposition、baseline comparability、efficacy endpoints、safety/welfare events、assay/QC summary、protocol deviation listing 和 statistical output 分表。所有 Not provided / TBD after review 字段应原样保留，不用假设值填充。'
+                    ]
+                },
+                {
+                    title: '八、动物福利和伦理',
+                    body: [
+                        '本研究必须把动物福利作为执行 gate，而不是报告附录。所有动物应每日记录精神状态、活动、grooming、摄食、饮水、呕吐、腹泻、便秘、体重变化速度、脱水、疼痛、黄疸、注射/给药部位反应及低血糖或高血糖风险。',
+                        '建议预设 dose hold / withdrawal 规则：持续厌食或显著摄食下降时暂停给药并兽医评估；快速体重下降超过福利阈值时暂停给药或降剂量；重复呕吐/腹泻或脱水时暂停给药并复查实验室；低血糖或异常糖代谢风险时立即复测并启动救援；肝肾、胰腺或血液学指标达到停药阈值时退出或进入兽医复核。',
+                        '若加入组织采样、CGM 或 target engagement 子研究，必须另行确认伦理和福利可接受性。具体阈值、救援方案和人道终点需由 Study Director、兽医/福利 reviewer 和 QA/legal 审查后锁定。'
+                    ]
+                },
+                {
+                    title: '九、大致时间安排',
+                    body: [
+                        '当前只能给出研究窗口，不能承诺执行 timeline。可讨论的流程为：screening 阶段完成动物来源、健康状态、模型和基础指标确认；baseline 期建议 1-2 周，用于体重、摄食、BCS/MCS、糖代谢和安全实验室稳定性观察；给药观察期可按 8-12 周讨论，最终由候选物机制、PK/PD、安全性和福利审查决定；follow-up 可设置 2-4 周，用于观察停药后体重、摄食和安全恢复。',
+                        '报告整理时间取决于 assay 周期、数据清理、query resolution、统计审查和 QA/legal 审阅。所有时间安排均应在内部模型资源、assay capacity、Study Director 排期和 sponsor package 到位后再确认。'
+                    ]
+                }
             ];
 
             const chainSteps = [
@@ -1107,13 +1165,18 @@
                 </div>
 
                 <div class="border border-emerald-200 bg-emerald-50 rounded-lg p-4">
-                    <div class="font-semibold text-emerald-900 mb-3">相对完整方案预览</div>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-                        ${protocolSections.map(row => `
-                            <div class="bg-white border border-emerald-100 rounded p-3 text-sm">
-                                <div class="font-medium text-emerald-900">${row[0]}</div>
-                                <div class="text-gray-700 mt-1">${row[1]}</div>
-                            </div>
+                    <div class="font-semibold text-emerald-900">相对完整实验方案正文（Claude 输出）</div>
+                    <div class="text-sm text-emerald-800 mt-1 mb-4">
+                        以下为基于当前粗需求、Wiki evidence pack 和国内外同行角色评审生成的正文草案；不是章节目录，也不是执行版 protocol。
+                    </div>
+                    <div class="space-y-4">
+                        ${protocolBody.map(section => `
+                            <article class="bg-white border border-emerald-100 rounded-lg p-4 text-sm">
+                                <h3 class="font-semibold text-emerald-900 mb-2">${section.title}</h3>
+                                <div class="space-y-2 text-gray-700 leading-6">
+                                    ${section.body.map(paragraph => `<p>${paragraph}</p>`).join('')}
+                                </div>
+                            </article>
                         `).join('')}
                     </div>
                 </div>
