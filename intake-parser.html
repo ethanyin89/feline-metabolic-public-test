@@ -168,8 +168,8 @@
                         </div>
                         <div class="bg-red-50 border border-red-200 rounded-lg p-4">
                             <div class="text-xs text-red-600 font-semibold uppercase">暂不承诺</div>
-                            <div class="mt-1 font-semibold text-red-900">不直接生成正式方案和报价</div>
-                            <div class="mt-2 text-sm text-red-800">动物数量、身体数据、剂量、报价和排期需要真实资源表、SOP 或研究负责人确认。</div>
+                            <div class="mt-1 font-semibold text-red-900">不处理报价和正式执行方案</div>
+                            <div class="mt-2 text-sm text-red-800">报价不属于当前项目范围；动物数量、身体数据、剂量和排期需要真实资源表、SOP 或研究负责人确认。</div>
                         </div>
                         <div class="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
                             <div class="text-xs text-emerald-600 font-semibold uppercase">下一步</div>
@@ -181,7 +181,7 @@
                     <div class="grid grid-cols-1 md:grid-cols-5 gap-3 text-sm">
                         <div class="bg-gray-50 border border-gray-200 rounded-lg p-3">
                             <div class="font-semibold text-gray-800">需求类型</div>
-                            <div class="text-gray-600 mt-1">机制、药效、剂量、PK/PD、安评、资源询价</div>
+                            <div class="text-gray-600 mt-1">机制、药效、剂量、PK/PD、安评、资源确认</div>
                         </div>
                         <div class="bg-gray-50 border border-gray-200 rounded-lg p-3">
                             <div class="font-semibold text-gray-800">业务分流</div>
@@ -189,11 +189,11 @@
                         </div>
                         <div class="bg-gray-50 border border-gray-200 rounded-lg p-3">
                             <div class="font-semibold text-gray-800">建议交付物</div>
-                            <div class="text-gray-600 mt-1">评估、澄清邮件、研究摘要、方案框架、报价边界</div>
+                            <div class="text-gray-600 mt-1">评估、澄清邮件、研究摘要、方案框架、范围边界</div>
                         </div>
                         <div class="bg-gray-50 border border-gray-200 rounded-lg p-3">
                             <div class="font-semibold text-gray-800">人工确认</div>
-                            <div class="text-gray-600 mt-1">研究设计、客户信息、资源、报价、合规边界</div>
+                            <div class="text-gray-600 mt-1">研究设计、客户信息、资源、排期、合规边界</div>
                         </div>
                         <div class="bg-gray-50 border border-gray-200 rounded-lg p-3">
                             <div class="font-semibold text-gray-800">规则沉淀</div>
@@ -529,7 +529,7 @@
                 dose_exploration: '剂量探索',
                 PK_PD: 'PK/PD',
                 toxicology: '毒理/安评',
-                model_resource_inquiry: '模型资源询价',
+                model_resource_inquiry: '模型资源确认',
                 clinical_operations: '临床运营项目'
             },
             domainRoute: {
@@ -547,7 +547,7 @@
                 clarification_email: '客户澄清问题',
                 study_design_memo: '研究设计摘要',
                 protocol_outline: '方案框架',
-                quotation_structure: '报价结构',
+                quotation_structure: '范围边界说明',
                 risk_checklist: '风险清单',
                 internal_review_note: '内部复核记录'
             }
@@ -808,7 +808,7 @@
                     ? '可以进入方案草案流程'
                     : '需要先补充信息';
             const nextStep = level === 'L2'
-                ? '可以开始 Phase 1 知识库准备，但产出限制为 model-fit memo / assessment。不要直接写 protocol、动物数量或报价。'
+                ? '可以开始 Phase 1 知识库准备，但产出限制为 model-fit memo / assessment。不要直接写 protocol 或动物数量；报价不属于当前项目范围。'
                 : level === 'L3'
                     ? '可以开始 Phase 1-4，产出 protocol draft。正式外发或执行前必须有 Sponsor package、Class B 内部执行材料和真人审核。'
                     : '请根据上方的"风险与缺口"部分补充所需信息后，重新评估。';
@@ -885,7 +885,7 @@
             if (studyIntent === 'model_resource_inquiry') deliverableType = 'clarification_email';
             if (studyIntent === 'mechanism_validation' && (!pe.target_gene || pe.target_gene === 'null')) deliverableType = 'model_fit_assessment';
             if (studyIntent === 'toxicology') deliverableType = 'risk_checklist';
-            if (/报价|pricing|quote/.test(text)) deliverableType = 'clarification_email';
+            if (/报价|pricing|quote|价格|费用/.test(text)) deliverableType = 'clarification_email';
             if (missing.length >= 2 || risks.length >= 2) deliverableType = deliverableType === 'quotation_structure' ? 'quotation_structure' : 'model_fit_assessment';
 
             const reviewGates = ['Scientific Review', 'BD Review'];
@@ -901,7 +901,7 @@
                 ruleUpdates.push('当客户说 GalNAc/小核酸时，第一层输出必须先确认靶组织、靶基因猫序列、KD 终点和 PD 时间窗。');
             }
             if (/报价|数量|资源|现有模型/.test(text)) {
-                ruleUpdates.push('当客户索要动物数量、身体数据或报价时，缺少 Class B 内部数据前只能输出澄清邮件和内部材料请求。');
+                ruleUpdates.push('当客户索要动物数量、身体数据或报价时，报价应标为当前项目范围外；动物数量和身体数据缺少 Class B 内部数据前只能输出澄清问题和内部材料请求。');
             }
 
             return { studyIntent, domainRoute, deliverableType, reviewGates, ruleUpdates };
@@ -915,7 +915,7 @@
                 'Scientific Review': '研究设计复核',
                 'BD Review': '客户信息确认',
                 'Resource Review': '模型资源确认',
-                'Pricing Review': '报价边界确认',
+                'Pricing Review': '范围边界确认',
                 'QA / Compliance Review': '合规与动物福利确认'
             };
 
@@ -964,7 +964,7 @@
                         当前靶点: ${publicValue(pe.target_gene)} · 需补充信息: ${missing.length}
                     </div>
                     <div class="text-xs text-red-700 mt-1">
-                        动物数量、报价、timeline、SOP、样本量、剂量推荐必须来自真实材料。当前页面会把这些内容列为待确认，不会自动编造。
+                        报价不属于当前项目范围；动物数量、timeline、SOP、样本量、剂量推荐必须来自真实材料。当前页面会把这些内容列为待确认，不会自动编造。
                     </div>
                 </div>
             `;
@@ -1362,13 +1362,13 @@
             if (hasGalnac && !targetGene) missing.push('靶基因未提供');
             if (hasGalnac) missing.push('靶组织和 GalNAc 递送逻辑未确认');
             if (mentionsDiabetes) missing.push('糖尿病诊断证据链未提供：持续高血糖、果糖胺、尿糖、临床症状');
-            if (asksPricing) missing.push('动物数量、表型数据、报价和 timeline 需要 Class B 内部执行材料');
+            if (asksPricing) missing.push('报价不属于当前项目范围；动物数量、表型数据和 timeline 需要 Class B 内部执行材料');
             if (!/剂量|dose/.test(text)) missing.push('剂量信息未提供');
 
             const riskFlags = [];
             if (hasGalnac && mentionsDiabetes) riskFlags.push('GalNAc 小核酸 + 单次给药不应直接写成糖尿病治疗药效，应优先定义为机制验证或早期 PD 验证。');
             if (hasDio || mentionsWeight) riskFlags.push('DIO/肥胖模型不能自动等同于稳定临床糖尿病模型。');
-            if (asksPricing) riskFlags.push('缺少真实内部材料时，不得生成动物数量、报价、timeline 或 SOP 承诺。');
+            if (asksPricing) riskFlags.push('报价请求应标为当前项目范围外；缺少真实内部材料时，不得生成动物数量、timeline 或 SOP 承诺。');
 
             return {
                 raw_request: input,
@@ -1387,7 +1387,7 @@
                     reason: hasGalnac
                         ? 'GalNAc 小核酸单次给药首先要验证靶基因 KD、PD 时间窗和靶组织可达性，再讨论代谢表型。'
                         : '当前信息不足以支持正式实验方案，只能先做模型适配和材料澄清。',
-                    not_recommended: mentionsDiabetes ? '直接写成稳定临床糖尿病治疗模型' : '正式实验方案 / 报价承诺',
+                    not_recommended: mentionsDiabetes ? '直接写成稳定临床糖尿病治疗模型' : '正式实验方案 / 报价处理',
                     not_recommended_reason: mentionsDiabetes
                         ? '缺少稳定糖尿病诊断证据链，且 DIO/肥胖状态不能自动等同糖尿病。'
                         : '缺少真实内部执行材料。'
@@ -1403,7 +1403,7 @@
                     hasGalnac ? '靶基因是什么？是否已有猫序列和引物/探针验证？' : '候选物类型和作用机制是什么？',
                     '预期 claim 是机制验证、代谢药效探索、资源询价，还是正式糖尿病治疗评价？',
                     '是否接受组织取样？目标组织是肝脏、脂肪、肌肉还是其他？',
-                    asksPricing ? '是否有可外发的动物数量、基线表型、报价和 timeline 权限？' : '是否已有 sponsor package、猫 PK/耐受性或非猫种属数据？'
+                    asksPricing ? '是否可以先确认研究目的、动物数量/基线表型来源和排期边界？报价不属于当前项目范围。' : '是否已有 sponsor package、猫 PK/耐受性或非猫种属数据？'
                 ],
                 confidence: 'medium',
                 confidence_reason: `本地规则初步判断：${fallbackReason}。当前结果适合需求分流，不能直接作为外发正式方案。`,
@@ -1448,7 +1448,7 @@
                         <div class="font-semibold text-amber-900 mb-2">暂不直接承诺</div>
                         <div class="text-sm text-amber-800 space-y-1">
                             <div>• 动物数量和身体数据</div>
-                            <div>• 具体报价和排期</div>
+                            <div>• 报价处理（当前项目范围外）和具体排期</div>
                             <div>• 正式实验方案和剂量推荐</div>
                         </div>
                     </div>
@@ -1872,7 +1872,7 @@ ${missing.map(m => `- ${m}`).join('\n')}` : ''}
         }
 
         function loadExample() {
-            document.getElementById('requestInput').value = `我们的需求是猫咪的糖尿病模型。药物类型：GalNAc小核酸类；靶基因：ANGPTL3；给药方案：皮下注射；给药剂量：待定。先按单次给药。请同时说明 DIO 肥胖猫资源、动物身体数据和粗略报价能否提供。`;
+            document.getElementById('requestInput').value = `我们的需求是猫咪的糖尿病模型。药物类型：GalNAc小核酸类；靶基因：ANGPTL3；给药方案：皮下注射；给药剂量：待定。先按单次给药。请同时说明 DIO 肥胖猫资源和动物身体数据能否提供；报价不在本项目范围内。`;
         }
 
         function loadRequestFromUrl() {
