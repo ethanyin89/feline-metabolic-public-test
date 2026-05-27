@@ -251,6 +251,9 @@
                         <button onclick="scrollToDecisionPath()" class="bg-white text-blue-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-50">
                             查看决策路径
                         </button>
+                        <button onclick="scrollToGenerationChain()" class="bg-white text-blue-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-50">
+                            查看生成链路
+                        </button>
                         <button onclick="scrollToEmail()" class="bg-white text-blue-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-50">
                             查看建议沟通内容 ↓
                         </button>
@@ -372,6 +375,19 @@
 
                     <!-- Gate Action -->
                     <div id="matrixGateAction" class="mt-4 p-4 rounded-lg border">
+                        <!-- Dynamically filled -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Protocol Generation Chain -->
+            <div id="generationChainSection" class="bg-white rounded-lg shadow-sm border border-gray-200 mb-6 hidden">
+                <div class="p-4 border-b border-gray-200">
+                    <h2 class="font-semibold text-gray-800">方案生成链路</h2>
+                    <p class="text-sm text-gray-500">客户粗需求 → feline-research-os Wiki → 国内外同行评审 → ChatGPT 框架 → Claude 相对完整方案</p>
+                </div>
+                <div class="p-4">
+                    <div id="generationChainContent" class="space-y-4">
                         <!-- Dynamically filled -->
                     </div>
                 </div>
@@ -867,9 +883,12 @@
             const text = getRequestText(result);
             const missing = result.missing_critical || result.missing_fields || [];
             const risks = result.risk_flags || [];
+            const pricingOutOfScope = /报价不(在|属于)|不处理报价|不涉及报价/.test(text);
+            const asksPricing = /报价|pricing|quote|价格|费用/.test(text) && !pricingOutOfScope;
+            const asksResource = /数量|资源|动物|现有模型/.test(text);
 
             let studyIntent = pe.study_intent || 'efficacy_exploration';
-            if (/报价|数量|资源|动物|现有模型/.test(text)) studyIntent = 'model_resource_inquiry';
+            if (asksPricing || asksResource) studyIntent = 'model_resource_inquiry';
             if (/毒理|安评|安全性|tox|adverse/.test(text)) studyIntent = 'toxicology';
             if (/pk|pd|药代|暴露|时间窗/.test(text)) studyIntent = 'PK_PD';
             if (/galnac|sirna|小核酸|kd|qpcr|靶基因/.test(text)) studyIntent = 'mechanism_validation';
@@ -885,7 +904,7 @@
             if (studyIntent === 'model_resource_inquiry') deliverableType = 'clarification_email';
             if (studyIntent === 'mechanism_validation' && (!pe.target_gene || pe.target_gene === 'null')) deliverableType = 'model_fit_assessment';
             if (studyIntent === 'toxicology') deliverableType = 'risk_checklist';
-            if (/报价|pricing|quote|价格|费用/.test(text)) deliverableType = 'clarification_email';
+            if (asksPricing) deliverableType = 'clarification_email';
             if (missing.length >= 2 || risks.length >= 2) deliverableType = deliverableType === 'quotation_structure' ? 'quotation_structure' : 'model_fit_assessment';
 
             const reviewGates = ['Scientific Review', 'BD Review'];
@@ -965,6 +984,113 @@
                     </div>
                     <div class="text-xs text-red-700 mt-1">
                         报价不属于当前项目范围；动物数量、timeline、SOP、样本量、剂量推荐必须来自真实材料。当前页面会把这些内容列为待确认，不会自动编造。
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderGenerationChain(result) {
+            const workflow = inferDecisionWorkflow(result);
+            const matrix = getMatrixClassification(result);
+            const pe = getParsedElements(result);
+            const rawRequest = result.raw_request || document.getElementById('requestInput')?.value || '';
+            const canDraft = matrix.level === 'L3';
+
+            const wikiRows = [
+                ['obesity/mechanism-overview.md', '猫肥胖是多因素营养/代谢问题，支持把日粮、环境、BCS/MCS、体成分放入方案。', '不能证明内部 DIO 模型资源或动物数量。'],
+                ['obesity/diabetes-bridge-bilingual.md', '肥胖到糖代谢异常的桥接机制支持 glucose、fructosamine、insulin 作为代谢读数。', '不能把肥胖猫直接写成稳定糖尿病治疗模型。'],
+                ['diabetes/endpoint-handbook.md', '糖代谢终点需要分层，不能把 glycemic control、remission、body condition 和 safety 混成一个结论。', '不能用于治疗方案排名或正式疗效 claim。']
+            ];
+
+            const peerRows = [
+                ['国际营养/肥胖医学', '主要终点不能只有体重，需要体成分、摄食、BCS/MCS 和肌肉保留。', '主要终点: 体重 + 体成分候选；次要终点加入摄食和 BCS/MCS。'],
+                ['国际内分泌/糖尿病', '肥胖代谢风险和稳定糖尿病治疗 claim 必须分开。', '糖代谢指标作为关键次要/探索终点，不写糖尿病治疗结论。'],
+                ['国际转化药理', '剂量、route、frequency 不能从粗需求推出。', '全部保留为 TBD after candidate package / PK-PD review。'],
+                ['国内模型/诊断/福利同行', 'DIO 定义、检测可解释性和福利阈值要能落地。', '加入 baseline 稳定期、样本处理、dose hold 和 withdrawal rules。']
+            ];
+
+            const chainSteps = [
+                ['1', '客户粗需求', rawRequest || '待输入', canDraft ? '可进入 L3-relative 方案草案' : '先停在评估/澄清'],
+                ['2', 'feline-research-os Wiki', 'Karpathy LLM Wiki evidence pack: obesity mechanism + diabetes bridge + endpoint handbook', '形成科学依据和边界'],
+                ['3', '国内外同行评审', 'role-based peer review，不是专家本人背书', '修正终点、模型、给药和福利边界'],
+                ['4', 'ChatGPT 框架', '把粗需求、Wiki pack、评审意见组织为章节骨架', '得到 protocol outline'],
+                ['5', 'Claude 输出', '基于框架扩写相对完整方案正文', '输出 draft，不是 execution-ready protocol']
+            ];
+
+            document.getElementById('generationChainSection').classList.remove('hidden');
+            document.getElementById('generationChainContent').innerHTML = `
+                <div class="bg-slate-50 border border-slate-200 rounded-lg p-4">
+                    <div class="flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                            <div class="font-semibold text-slate-900">当前链路判断</div>
+                            <div class="text-sm text-slate-600 mt-1">
+                                输出层级: ${matrix.level || '待确认'} · 交付物: ${WORKFLOW_LABELS.deliverableType[workflow.deliverableType] || workflow.deliverableType}
+                            </div>
+                        </div>
+                        <span class="px-3 py-1 rounded text-sm font-medium ${canDraft ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}">
+                            ${canDraft ? '可生成相对完整方案草案' : '先补材料或只做评估'}
+                        </span>
+                    </div>
+                    <div class="mt-3 text-sm text-slate-700">
+                        候选物/靶点: ${publicValue(pe.drug_type)} / ${publicValue(pe.target_gene)} · 报价不属于当前项目范围。
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-5 gap-3">
+                    ${chainSteps.map(step => `
+                        <div class="border border-gray-200 rounded-lg p-3 bg-white">
+                            <div class="text-xs text-gray-500">Step ${step[0]}</div>
+                            <div class="font-semibold text-gray-900 mt-1">${step[1]}</div>
+                            <div class="text-xs text-gray-600 mt-2">${step[2]}</div>
+                            <div class="text-xs text-blue-700 mt-2">${step[3]}</div>
+                        </div>
+                    `).join('')}
+                </div>
+
+                <div class="border border-blue-200 bg-blue-50 rounded-lg p-4">
+                    <div class="font-semibold text-blue-900 mb-3">Wiki Evidence Pack</div>
+                    <div class="space-y-3">
+                        ${wikiRows.map(row => `
+                            <div class="bg-white border border-blue-100 rounded p-3 text-sm">
+                                <div class="font-medium text-blue-900">${row[0]}</div>
+                                <div class="text-gray-700 mt-1">可支持: ${row[1]}</div>
+                                <div class="text-red-700 mt-1">不能支持: ${row[2]}</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+
+                <div class="border border-purple-200 bg-purple-50 rounded-lg p-4">
+                    <div class="font-semibold text-purple-900 mb-3">国内外同行评审吸收表</div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        ${peerRows.map(row => `
+                            <div class="bg-white border border-purple-100 rounded p-3 text-sm">
+                                <div class="font-medium text-purple-900">${row[0]}</div>
+                                <div class="text-gray-700 mt-1">评审意见: ${row[1]}</div>
+                                <div class="text-emerald-700 mt-1">进入方案: ${row[2]}</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <div class="border border-gray-200 rounded-lg p-4">
+                        <div class="font-semibold text-gray-900">ChatGPT 方案框架</div>
+                        <div class="mt-2 text-sm text-gray-700 space-y-1">
+                            <div>1. 方案摘要和研究定位</div>
+                            <div>2. Wiki 科学依据和证据边界</div>
+                            <div>3. 国内外同行评审吸收表</div>
+                            <div>4. 研究设计、动物模型、给药原则</div>
+                            <div>5. 终点、访视表、安全、统计、待确认清单</div>
+                        </div>
+                    </div>
+                    <div class="border border-gray-200 rounded-lg p-4">
+                        <div class="font-semibold text-gray-900">Claude 相对完整方案输出</div>
+                        <div class="mt-2 text-sm text-gray-700 space-y-1">
+                            <div>可输出: 研究逻辑、分组框架、终点体系、SoA、样本处理、安全福利、统计框架、报告结构。</div>
+                            <div>必须保留 TBD: 动物数、剂量、route/frequency、SOP、assay QC、timeline。</div>
+                            <div>不能输出: 报价、执行承诺、真人专家背书、稳定糖尿病治疗 claim。</div>
+                        </div>
                     </div>
                 </div>
             `;
@@ -1339,21 +1465,26 @@
         function buildLocalRuleResult(input, fallbackReason) {
             const text = input.toLowerCase();
             const hasGalnac = /galnac|sirna|小核酸/.test(text);
+            const hasGlp1 = /glp-?1|代谢改善候选物|多肽/.test(text);
             const hasDio = /dio|饮食诱导|肥胖模型/.test(text);
-            const asksPricing = /报价|价格|费用|数量|动物数量|现有模型/.test(text);
+            const pricingOutOfScope = /报价不(在|属于)|不处理报价|不涉及报价/.test(text);
+            const asksPricing = /报价|价格|费用/.test(text) && !pricingOutOfScope;
+            const asksResource = /数量|动物数量|现有模型/.test(text);
             const mentionsDiabetes = /糖尿病|diabetes|血糖/.test(text);
             const mentionsWeight = /肥胖|体重|weight|obesity/.test(text);
             const targetMatch = input.match(/靶基因(?:是|为|:|：)?\s*([A-Za-z0-9_-]+)/i);
             const targetGene = targetMatch ? targetMatch[1] : null;
 
             let studyIntent = 'efficacy_exploration';
-            if (asksPricing) studyIntent = 'model_resource_inquiry';
+            if (asksPricing || asksResource) studyIntent = 'model_resource_inquiry';
             if (hasGalnac) studyIntent = 'mechanism_validation';
 
             const recommendedModel = hasDio
                 ? 'DIO肥胖猫'
                 : hasGalnac
                     ? 'DIO肥胖猫 / 胰岛素抵抗猫（待靶点和组织取样可行性确认）'
+                    : mentionsWeight || hasGlp1
+                        ? 'DIO肥胖猫或肥胖伴早期代谢异常风险猫'
                     : mentionsDiabetes
                         ? '需先区分肥胖伴代谢异常 vs 稳定临床糖尿病猫'
                         : '待模型适配评估';
@@ -1362,20 +1493,20 @@
             if (hasGalnac && !targetGene) missing.push('靶基因未提供');
             if (hasGalnac) missing.push('靶组织和 GalNAc 递送逻辑未确认');
             if (mentionsDiabetes) missing.push('糖尿病诊断证据链未提供：持续高血糖、果糖胺、尿糖、临床症状');
-            if (asksPricing) missing.push('报价不属于当前项目范围；动物数量、表型数据和 timeline 需要 Class B 内部执行材料');
+            if (asksPricing || asksResource) missing.push('报价不属于当前项目范围；动物数量、表型数据和 timeline 需要 Class B 内部执行材料');
             if (!/剂量|dose/.test(text)) missing.push('剂量信息未提供');
 
             const riskFlags = [];
             if (hasGalnac && mentionsDiabetes) riskFlags.push('GalNAc 小核酸 + 单次给药不应直接写成糖尿病治疗药效，应优先定义为机制验证或早期 PD 验证。');
             if (hasDio || mentionsWeight) riskFlags.push('DIO/肥胖模型不能自动等同于稳定临床糖尿病模型。');
-            if (asksPricing) riskFlags.push('报价请求应标为当前项目范围外；缺少真实内部材料时，不得生成动物数量、timeline 或 SOP 承诺。');
+            if (asksPricing || asksResource || pricingOutOfScope) riskFlags.push('报价请求应标为当前项目范围外；缺少真实内部材料时，不得生成动物数量、timeline 或 SOP 承诺。');
 
             return {
                 raw_request: input,
                 local_rule_result: true,
                 fallback_reason: fallbackReason,
                 parsed_elements: {
-                    drug_type: hasGalnac ? 'GalNAc_siRNA' : 'other',
+                    drug_type: hasGalnac ? 'GalNAc_siRNA' : hasGlp1 ? 'GLP-1 RA / 代谢改善候选物' : 'other',
                     target_gene: targetGene,
                     target_indication: mentionsDiabetes ? '糖尿病/糖代谢异常' : mentionsWeight ? '肥胖/代谢异常' : null,
                     study_intent: studyIntent,
@@ -1386,6 +1517,8 @@
                     recommended: recommendedModel,
                     reason: hasGalnac
                         ? 'GalNAc 小核酸单次给药首先要验证靶基因 KD、PD 时间窗和靶组织可达性，再讨论代谢表型。'
+                        : mentionsWeight || hasGlp1
+                            ? '当前粗需求足以进入相对完整方案草案：先用 feline-research-os Wiki 支撑肥胖/代谢终点，再用国内外同行角色视角校正方案边界。'
                         : '当前信息不足以支持正式实验方案，只能先做模型适配和材料澄清。',
                     not_recommended: mentionsDiabetes ? '直接写成稳定临床糖尿病治疗模型' : '正式实验方案 / 报价处理',
                     not_recommended_reason: mentionsDiabetes
@@ -1393,9 +1526,9 @@
                         : '缺少真实内部执行材料。'
                 },
                 endpoint_suggestions: {
-                    primary: hasGalnac ? ['靶基因 KD（RT-qPCR/蛋白表达，待靶组织确认）'] : ['待研究目的确认'],
-                    mechanism: ['靶组织表达', '下游通路标志物', 'PD 时间窗'],
-                    safety: ['体重', '摄食', '临床观察', '基础生化']
+                    primary: hasGalnac ? ['靶基因 KD（RT-qPCR/蛋白表达，待靶组织确认）'] : ['体重相对 baseline 变化', '体脂/体成分变化（待测量流程确认）'],
+                    mechanism: hasGalnac ? ['靶组织表达', '下游通路标志物', 'PD 时间窗'] : ['fasting glucose', 'fructosamine', 'insulin', '可选 target engagement'],
+                    safety: ['体重下降速度', '摄食', '临床观察', '基础生化']
                 },
                 risk_flags: riskFlags,
                 missing_critical: missing,
@@ -1403,7 +1536,7 @@
                     hasGalnac ? '靶基因是什么？是否已有猫序列和引物/探针验证？' : '候选物类型和作用机制是什么？',
                     '预期 claim 是机制验证、代谢药效探索、资源询价，还是正式糖尿病治疗评价？',
                     '是否接受组织取样？目标组织是肝脏、脂肪、肌肉还是其他？',
-                    asksPricing ? '是否可以先确认研究目的、动物数量/基线表型来源和排期边界？报价不属于当前项目范围。' : '是否已有 sponsor package、猫 PK/耐受性或非猫种属数据？'
+                    (asksPricing || asksResource) ? '是否可以先确认研究目的、动物数量/基线表型来源和排期边界？报价不属于当前项目范围。' : '是否已有 sponsor package、猫 PK/耐受性或非猫种属数据？'
                 ],
                 confidence: 'medium',
                 confidence_reason: `本地规则初步判断：${fallbackReason}。当前结果适合需求分流，不能直接作为外发正式方案。`,
@@ -1511,6 +1644,15 @@
             section.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
 
+        function scrollToGenerationChain() {
+            const section = document.getElementById('generationChainSection');
+            if (!section || section.classList.contains('hidden')) {
+                showToast('请先生成初步判断，再查看生成链路', true);
+                return;
+            }
+            section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
         function buildDecisionPathUrl() {
             const url = new URL(window.location.href);
             const input = currentResult?.raw_request || document.getElementById('requestInput')?.value.trim() || '';
@@ -1547,13 +1689,18 @@
                     : matrix.level === 'L3'
                         ? 'L3 may support protocol draft only. Execution-ready protocol requires Class B evidence and human review.'
                         : 'Does not enter protocol workflow.',
+                generation_chain_version: 'v1.3 rough need -> feline-research-os Wiki -> role-based peer review -> ChatGPT framework -> Claude protocol draft',
                 study_intent: workflow.studyIntent || 'Not provided',
                 domain_route: workflow.domainRoute || 'Not provided',
                 deliverable_type: workflow.deliverableType || 'Not provided',
                 risk_flags: result.risk_flags || [],
                 missing_critical: result.missing_critical || result.missing_fields || [],
                 decision_check: result.decision_check || { confirmed: false },
-                knowledge_base_manifest: 'Not provided'
+                knowledge_base_manifest: [
+                    'feline-research-os/topics/obesity/mechanism-overview.md',
+                    'feline-research-os/topics/obesity/diabetes-bridge-bilingual.md',
+                    'feline-research-os/topics/diabetes/endpoint-handbook.md'
+                ]
             };
         }
 
@@ -1664,6 +1811,7 @@
             renderDecisionWorkflow(result);
             renderDecisionPath(result);
             renderTaxonomyMatrix(result);
+            renderGenerationChain(result);
             renderInternationalExpertCheck(result);
             renderDomesticExpertCheck(result);
 
@@ -1862,6 +2010,7 @@ ${missing.map(m => `- ${m}`).join('\n')}` : ''}
             document.getElementById('resultsSection').classList.add('hidden');
             document.getElementById('decisionPathSection').classList.add('hidden');
             document.getElementById('taxonomyMatrixSection').classList.add('hidden');
+            document.getElementById('generationChainSection').classList.add('hidden');
             if (window.location.hash === '#decision-path' || new URLSearchParams(window.location.search).has('request')) {
                 const url = new URL(window.location.href);
                 url.searchParams.delete('request');
@@ -1872,7 +2021,7 @@ ${missing.map(m => `- ${m}`).join('\n')}` : ''}
         }
 
         function loadExample() {
-            document.getElementById('requestInput').value = `我们的需求是猫咪的糖尿病模型。药物类型：GalNAc小核酸类；靶基因：ANGPTL3；给药方案：皮下注射；给药剂量：待定。先按单次给药。请同时说明 DIO 肥胖猫资源和动物身体数据能否提供；报价不在本项目范围内。`;
+            document.getElementById('requestInput').value = `客户粗需求：希望围绕猫肥胖/代谢改善方向，基于当前可披露信息生成一份相对完整的临床前药效实验方案。候选物暂按 GLP-1 RA 或类似代谢改善候选物处理，模型方向为 DIO 肥胖猫或肥胖伴早期糖代谢风险猫；重点关注体重、体成分、摄食量、糖代谢和安全性。请体现 feline-research-os Wiki、国内外同行评审、ChatGPT 框架和 Claude 完整方案输出；报价不在本项目范围内。`;
         }
 
         function loadRequestFromUrl() {
