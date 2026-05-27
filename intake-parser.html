@@ -1009,6 +1009,18 @@
                 ['国内模型/诊断/福利同行', 'DIO 定义、检测可解释性和福利阈值要能落地。', '加入 baseline 稳定期、样本处理、dose hold 和 withdrawal rules。']
             ];
 
+            const protocolSections = [
+                ['实验目的', '评价候选代谢改善药物在 DIO 肥胖猫或肥胖伴早期代谢异常风险猫中对体重、体成分、摄食、糖代谢和安全性的影响。'],
+                ['实验背景与依据', '基于 feline-research-os 肥胖机制、肥胖-糖尿病桥接和糖代谢终点手册：肥胖与胰岛素敏感性下降相关，但不能直接写成稳定糖尿病治疗 claim。'],
+                ['受试物', '候选物暂按 GLP-1 RA 或类似代谢改善候选物处理；molecule、route、dose、frequency、formulation 均为 TBD after sponsor package / PK-PD review。'],
+                ['实验动物', 'DIO 肥胖猫或肥胖伴早期糖代谢风险猫；动物来源、数量、BCS/MCS、体成分、baseline 表型和可用性均需内部模型材料确认。'],
+                ['实验设计', '随机、平行对照、多剂量探索性药效研究；建议 Vehicle/placebo、低剂量、高剂量、可选参照组；样本量由统计审查决定。'],
+                ['观察和评价', '主要观察体重和体成分；关键次要观察摄食量、BCS/MCS、fasting glucose、fructosamine、insulin、lipid panel 和安全实验室。'],
+                ['数据分析整理', '连续型终点建议 ANCOVA 或 mixed-effects model，baseline 作为协变量；输出 effect size、置信区间、趋势和缺失值说明。'],
+                ['动物福利和伦理', '设置日常观察、dose hold、withdrawal、人道终点和救援流程；具体阈值需 Study Director、兽医/福利 reviewer 确认。'],
+                ['大致时间安排', '可讨论 Screening、1-2 周 baseline、8-12 周给药观察、2-4 周 follow-up；这只是方案窗口，不是执行 timeline 承诺。']
+            ];
+
             const chainSteps = [
                 ['1', '客户粗需求', rawRequest || '待输入', canDraft ? '可进入 L3-relative 方案草案' : '先停在评估/澄清'],
                 ['2', 'feline-research-os Wiki', 'Karpathy LLM Wiki evidence pack: obesity mechanism + diabetes bridge + endpoint handbook', '形成科学依据和边界'],
@@ -1077,20 +1089,32 @@
                     <div class="border border-gray-200 rounded-lg p-4">
                         <div class="font-semibold text-gray-900">ChatGPT 方案框架</div>
                         <div class="mt-2 text-sm text-gray-700 space-y-1">
-                            <div>1. 方案摘要和研究定位</div>
-                            <div>2. Wiki 科学依据和证据边界</div>
-                            <div>3. 国内外同行评审吸收表</div>
-                            <div>4. 研究设计、动物模型、给药原则</div>
-                            <div>5. 终点、访视表、安全、统计、待确认清单</div>
+                            <div>1. 实验目的、实验背景与依据</div>
+                            <div>2. 受试物、实验动物、实验设计</div>
+                            <div>3. 观察和评价、数据分析整理</div>
+                            <div>4. 动物福利和伦理、大致时间安排</div>
+                            <div>5. Wiki 证据、同行评审吸收表、待确认清单</div>
                         </div>
                     </div>
                     <div class="border border-gray-200 rounded-lg p-4">
                         <div class="font-semibold text-gray-900">Claude 相对完整方案输出</div>
                         <div class="mt-2 text-sm text-gray-700 space-y-1">
-                            <div>可输出: 研究逻辑、分组框架、终点体系、SoA、样本处理、安全福利、统计框架、报告结构。</div>
+                            <div>可输出: 实验目的、背景依据、受试物、动物、设计、观察评价、数据分析、福利伦理和时间窗口。</div>
                             <div>必须保留 TBD: 动物数、剂量、route/frequency、SOP、assay QC、timeline。</div>
                             <div>不能输出: 报价、执行承诺、真人专家背书、稳定糖尿病治疗 claim。</div>
                         </div>
+                    </div>
+                </div>
+
+                <div class="border border-emerald-200 bg-emerald-50 rounded-lg p-4">
+                    <div class="font-semibold text-emerald-900 mb-3">相对完整方案预览</div>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        ${protocolSections.map(row => `
+                            <div class="bg-white border border-emerald-100 rounded p-3 text-sm">
+                                <div class="font-medium text-emerald-900">${row[0]}</div>
+                                <div class="text-gray-700 mt-1">${row[1]}</div>
+                            </div>
+                        `).join('')}
                     </div>
                 </div>
             `;
