@@ -1165,9 +1165,19 @@
                 </div>
 
                 <div class="border border-emerald-200 bg-emerald-50 rounded-lg p-4">
-                    <div class="font-semibold text-emerald-900">相对完整实验方案正文（Claude 输出）</div>
-                    <div class="text-sm text-emerald-800 mt-1 mb-4">
-                        以下为基于当前粗需求、Wiki evidence pack 和国内外同行角色评审生成的正文草案；不是章节目录，也不是执行版 protocol。
+                    <div class="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                            <div class="font-semibold text-emerald-900">相对完整实验方案正文（Claude 输出）</div>
+                            <div class="text-sm text-emerald-800 mt-1">
+                                页面内显示摘要正文；完整 v1.4 golden output 已按旧业务流质量标准生成，可直接打开长文方案。
+                            </div>
+                        </div>
+                        <a href="./feline-obesity-protocol-generated-from-rough-need-v1-4-2026-05-27.md?v=ae9b790" target="_blank" class="bg-emerald-700 hover:bg-emerald-800 text-white px-4 py-2 rounded-lg text-sm font-medium">
+                            打开完整 v1.4 方案
+                        </a>
+                    </div>
+                    <div class="text-sm text-emerald-800 mt-3 mb-4">
+                        以下为页面内正文摘要；完整文件包含 Executive Summary、客户问题拆解、机制和模型取舍、入排、基线包、分组、终点、检测链条、福利伦理、数据分析、失败模式、Sponsor 追问、Evidence Table、Expert Review Checklist 和内部材料 gate。
                     </div>
                     <div class="space-y-4">
                         ${protocolBody.map(section => `
