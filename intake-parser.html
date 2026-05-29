@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>猫代谢研究需求评估</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="decision-log.js"></script>
     <script src="generation-chain.js"></script>
     <style>
         .toast {
@@ -146,6 +147,10 @@
                 <h1 class="text-xl font-bold">猫代谢研究需求评估</h1>
                 <p class="text-sm text-slate-300">猫代谢疾病 · 模型适配 · 终点建议</p>
             </div>
+            <a href="audit-view.html" class="text-sm text-slate-400 hover:text-white transition flex items-center gap-1" title="查看决策审计日志">
+                <span>📋</span>
+                <span>审计视图</span>
+            </a>
         </div>
     </header>
 
@@ -1625,8 +1630,25 @@
                 return;
             }
 
+            // Initialize decision log for audit trail
+            if (window.DecisionLog) {
+                window.DecisionLog.init(input);
+            }
+
             const localResult = buildLocalRuleResult(input, 'Immediate local rule-based parse');
             currentResult = localResult;
+
+            // Log parsed elements and save decision log
+            if (window.DecisionLog) {
+                window.DecisionLog.logParsedElements(localResult.parsed_elements);
+                window.DecisionLog.logFinalDecision(
+                    inferDecisionWorkflow(localResult),
+                    localResult.risk_flags,
+                    localResult.missing_critical
+                );
+                window.DecisionLog.save();
+            }
+
             displayResults(localResult);
             saveToHistory(input, localResult);
             showToast('初步判断已生成');
@@ -1634,6 +1656,8 @@
         }
         function buildLocalRuleResult(input, fallbackReason) {
             const text = input.toLowerCase();
+
+            // Step 1: Keyword Extraction
             const hasGalnac = /galnac|sirna|小核酸/.test(text);
             const hasGlp1 = /glp-?1|代谢改善候选物|多肽/.test(text);
             const hasDio = /dio|饮食诱导|肥胖模型/.test(text);
@@ -1645,9 +1669,51 @@
             const targetMatch = input.match(/靶基因(?:是|为|:|：)?\s*([A-Za-z0-9_-]+)/i);
             const targetGene = targetMatch ? targetMatch[1] : null;
 
+            // Log Step 1: Keyword Extraction
+            const matchedPatterns = [];
+            const extractionEvidence = [];
+            if (hasGalnac) { matchedPatterns.push('/galnac|sirna|小核酸/'); extractionEvidence.push('原文匹配 GalNAc/siRNA 关键词'); }
+            if (hasGlp1) { matchedPatterns.push('/glp-?1|代谢改善候选物|多肽/'); extractionEvidence.push('原文匹配 GLP-1 类药物关键词'); }
+            if (hasDio) { matchedPatterns.push('/dio|饮食诱导|肥胖模型/'); extractionEvidence.push('原文匹配 DIO 模型关键词'); }
+            if (mentionsDiabetes) { matchedPatterns.push('/糖尿病|diabetes|血糖/'); extractionEvidence.push('原文提及糖尿病相关内容'); }
+            if (mentionsWeight) { matchedPatterns.push('/肥胖|体重|weight|obesity/'); extractionEvidence.push('原文提及肥胖/体重相关内容'); }
+            if (targetGene) { matchedPatterns.push('/靶基因(?:是|为|:|：)?\\s*([A-Za-z0-9_-]+)/'); extractionEvidence.push(`提取到靶基因: ${targetGene}`); }
+
+            if (window.DecisionLog) {
+                window.DecisionLog.logInference(
+                    1, '关键词提取',
+                    '原始文本',
+                    ['R1.1-药物类型识别', 'R1.2-靶基因提取', 'R1.3-适应症检测'],
+                    extractionEvidence.length > 0 ? extractionEvidence : ['未匹配到特定关键词'],
+                    { hasGalnac, hasGlp1, hasDio, mentionsDiabetes, mentionsWeight, targetGene },
+                    matchedPatterns
+                );
+            }
+
+            // Step 2: Business Routing
             let studyIntent = 'efficacy_exploration';
-            if (asksPricing || asksResource) studyIntent = 'model_resource_inquiry';
-            if (hasGalnac) studyIntent = 'mechanism_validation';
+            const routingEvidence = [];
+            if (asksPricing || asksResource) {
+                studyIntent = 'model_resource_inquiry';
+                routingEvidence.push('检测到报价/资源询问 → 资源询价路由');
+            }
+            if (hasGalnac) {
+                studyIntent = 'mechanism_validation';
+                routingEvidence.push('GalNAc 类药物 → 机制验证路由（需先验证靶点 KD）');
+            }
+            if (routingEvidence.length === 0) {
+                routingEvidence.push('默认路由 → 药效探索');
+            }
+
+            if (window.DecisionLog) {
+                window.DecisionLog.logInference(
+                    2, '业务分流',
+                    { hasGalnac, asksPricing, asksResource },
+                    hasGalnac ? ['R2.3-GalNAc默认机制验证'] : asksPricing ? ['R2.1-报价请求路由'] : ['R2.0-默认药效探索'],
+                    routingEvidence,
+                    { studyIntent }
+                );
+            }
 
             const recommendedModel = hasDio
                 ? 'DIO肥胖猫'
@@ -1670,6 +1736,22 @@
             if (hasGalnac && mentionsDiabetes) riskFlags.push('GalNAc 小核酸 + 单次给药不应直接写成糖尿病治疗药效，应优先定义为机制验证或早期 PD 验证。');
             if (hasDio || mentionsWeight) riskFlags.push('DIO/肥胖模型不能自动等同于稳定临床糖尿病模型。');
             if (asksPricing || asksResource || pricingOutOfScope) riskFlags.push('报价请求应标为当前项目范围外；缺少真实内部材料时，不得生成动物数量、timeline 或 SOP 承诺。');
+
+            // Log Step 3: Risk Flagging
+            const riskEvidence = [];
+            if (missing.length > 0) riskEvidence.push(`检测到 ${missing.length} 个缺失字段`);
+            if (riskFlags.length > 0) riskEvidence.push(`检测到 ${riskFlags.length} 个风险标记`);
+            if (riskEvidence.length === 0) riskEvidence.push('无明显缺失或风险');
+
+            if (window.DecisionLog) {
+                window.DecisionLog.logInference(
+                    3, '风险标记',
+                    { hasGalnac, targetGene, mentionsDiabetes, asksPricing },
+                    ['R3.1-必填字段检查', 'R3.2-边界情况检测'],
+                    riskEvidence,
+                    { risks: riskFlags, gaps: missing }
+                );
+            }
 
             return {
                 raw_request: input,
@@ -1984,6 +2066,26 @@
             renderGenerationChain(result);
             renderInternationalExpertCheck(result);
             renderDomesticExpertCheck(result);
+
+            // Log Step 4: Expert Selection (using expert-config.js if available)
+            if (window.DecisionLog) {
+                const workflow = inferDecisionWorkflow(result);
+                const expertConfig = window.EXPERT_PANELS || {};
+                window.DecisionLog.logInference(
+                    4, '专家视角选择',
+                    { domainRoute: workflow.domainRoute, drugType: getParsedElements(result).drug_type },
+                    ['R4.1-领域专家匹配'],
+                    [`${workflow.domainRoute} 路由 → 选择对应专家视角`],
+                    {
+                        primaryExperts: ['营养/肥胖', '内分泌', '转化药效'],
+                        expertConfigAvailable: !!window.EXPERT_PANELS
+                    }
+                );
+                window.DecisionLog.logExpertPerspectives(
+                    expertConfig.international || [],
+                    expertConfig.domestic || []
+                );
+            }
 
             // Risk Flags + Missing Critical
             const risks = result.risk_flags || [];

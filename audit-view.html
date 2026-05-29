@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>决策审计视图 | Feline Metabolic Research</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="decision-log.js"></script>
+    <script src="expert-config.js"></script>
+    <style>
+        .inference-step {
+            border-left: 3px solid #3b82f6;
+            transition: all 0.2s;
+        }
+        .inference-step:hover {
+            border-left-color: #1d4ed8;
+            background-color: #f8fafc;
+        }
+        .rule-tag {
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 0.75rem;
+        }
+        .evidence-item {
+            position: relative;
+            padding-left: 1rem;
+        }
+        .evidence-item::before {
+            content: '→';
+            position: absolute;
+            left: 0;
+            color: #6b7280;
+        }
+        .pattern-code {
+            font-family: 'Monaco', 'Menlo', monospace;
+            background-color: #f3f4f6;
+            padding: 0.125rem 0.375rem;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+        }
+        .collapsible-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+        }
+        .collapsible-content.open {
+            max-height: 2000px;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="max-w-5xl mx-auto px-4 py-8">
+        <!-- Header -->
+        <div class="mb-8">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900">决策审计视图</h1>
+                    <p class="text-gray-600 mt-1">推理级决策链回溯</p>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="exportCurrentLog()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+                        导出 JSON
+                    </button>
+                    <a href="intake-parser.html" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition">
+                        返回解析页
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Session Selector -->
+        <div id="sessionSelector" class="mb-6 bg-white rounded-lg shadow p-4">
+            <label class="block text-sm font-medium text-gray-700 mb-2">选择会话</label>
+            <select id="sessionSelect" onchange="loadSession(this.value)" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                <option value="">-- 选择历史会话 --</option>
+            </select>
+        </div>
+
+        <!-- No Session Message -->
+        <div id="noSession" class="hidden bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center">
+            <div class="text-yellow-800 text-lg mb-2">没有找到决策日志</div>
+            <p class="text-yellow-700 text-sm">请先在 <a href="intake-parser.html" class="underline">解析页面</a> 执行一次解析，决策日志会自动记录。</p>
+        </div>
+
+        <!-- Main Content -->
+        <div id="mainContent" class="hidden space-y-6">
+            <!-- Session Info -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-semibold text-gray-900">会话信息</h2>
+                    <span id="sessionTimestamp" class="text-sm text-gray-500"></span>
+                </div>
+                <div class="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                        <span class="text-gray-500">Session ID:</span>
+                        <span id="sessionId" class="font-mono text-gray-700 ml-2"></span>
+                    </div>
+                    <div>
+                        <span class="text-gray-500">Schema Version:</span>
+                        <span id="schemaVersion" class="font-mono text-gray-700 ml-2"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Raw Input -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">原始输入</h2>
+                <div id="rawInput" class="bg-gray-50 rounded-lg p-4 text-sm text-gray-700 whitespace-pre-wrap font-mono"></div>
+            </div>
+
+            <!-- Parsed Elements -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">解析结果</h2>
+                <div id="parsedElements" class="grid grid-cols-2 md:grid-cols-3 gap-4"></div>
+            </div>
+
+            <!-- Inference Chain -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">推理链</h2>
+                <div id="inferenceChain" class="space-y-4"></div>
+            </div>
+
+            <!-- Final Decision -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">最终决策</h2>
+                <div id="finalDecision"></div>
+            </div>
+
+            <!-- Expert Perspectives -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">专家配置（完整版）</h2>
+                <div id="expertPerspectives" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentLog = null;
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            populateSessionSelector();
+
+            // Check URL for session parameter
+            const params = new URLSearchParams(window.location.search);
+            const sessionId = params.get('session');
+            if (sessionId) {
+                document.getElementById('sessionSelect').value = sessionId;
+                loadSession(sessionId);
+            }
+        });
+
+        function populateSessionSelector() {
+            const index = DecisionLog.getIndex();
+            const select = document.getElementById('sessionSelect');
+
+            if (index.length === 0) {
+                document.getElementById('noSession').classList.remove('hidden');
+                return;
+            }
+
+            // Sort by timestamp descending (newest first)
+            index.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+            index.forEach(session => {
+                const option = document.createElement('option');
+                option.value = session.sessionId;
+                const date = new Date(session.timestamp).toLocaleString('zh-CN');
+                option.textContent = `${date} - ${session.preview}`;
+                select.appendChild(option);
+            });
+        }
+
+        function loadSession(sessionId) {
+            if (!sessionId) {
+                document.getElementById('mainContent').classList.add('hidden');
+                document.getElementById('noSession').classList.remove('hidden');
+                return;
+            }
+
+            currentLog = DecisionLog.load(sessionId);
+            if (!currentLog) {
+                alert('无法加载会话数据');
+                return;
+            }
+
+            document.getElementById('noSession').classList.add('hidden');
+            document.getElementById('mainContent').classList.remove('hidden');
+
+            renderSessionInfo();
+            renderRawInput();
+            renderParsedElements();
+            renderInferenceChain();
+            renderFinalDecision();
+            renderExpertPerspectives();
+        }
+
+        function renderSessionInfo() {
+            document.getElementById('sessionId').textContent = currentLog.sessionId;
+            document.getElementById('schemaVersion').textContent = currentLog.version;
+            document.getElementById('sessionTimestamp').textContent =
+                new Date(currentLog.timestamp).toLocaleString('zh-CN');
+        }
+
+        function renderRawInput() {
+            document.getElementById('rawInput').textContent = currentLog.input.rawText;
+        }
+
+        function renderParsedElements() {
+            const container = document.getElementById('parsedElements');
+            const elements = currentLog.input.parsedElements || {};
+            container.innerHTML = '';
+
+            const labels = {
+                drug_type: '药物类型',
+                target_gene: '靶基因',
+                target_indication: '目标适应症',
+                study_intent: '研究意图',
+                dosing_route: '给药途径',
+                dosing_regimen: '给药方案'
+            };
+
+            Object.entries(elements).forEach(([key, value]) => {
+                if (value === null || value === undefined) return;
+                const div = document.createElement('div');
+                div.className = 'bg-gray-50 rounded-lg p-3';
+                div.innerHTML = `
+                    <div class="text-xs text-gray-500 mb-1">${labels[key] || key}</div>
+                    <div class="text-sm font-medium text-gray-900">${value}</div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function renderInferenceChain() {
+            const container = document.getElementById('inferenceChain');
+            container.innerHTML = '';
+
+            const stepColors = {
+                1: 'blue',
+                2: 'green',
+                3: 'amber',
+                4: 'purple'
+            };
+
+            currentLog.inferences.forEach((inference, index) => {
+                const color = stepColors[inference.step] || 'gray';
+                const stepDiv = document.createElement('div');
+                stepDiv.className = `inference-step pl-4 py-3 cursor-pointer`;
+                stepDiv.onclick = () => toggleCollapsible(`inference-${index}`);
+
+                stepDiv.innerHTML = `
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-${color}-100 text-${color}-700 font-bold text-sm">
+                                ${inference.step}
+                            </span>
+                            <div>
+                                <div class="font-semibold text-gray-900">${inference.name}</div>
+                                <div class="text-xs text-gray-500">${new Date(inference.timestamp).toLocaleTimeString('zh-CN')}</div>
+                            </div>
+                        </div>
+                        <span class="text-gray-400">▼</span>
+                    </div>
+
+                    <div id="inference-${index}" class="collapsible-content mt-4 space-y-4">
+                        <!-- Input -->
+                        <div>
+                            <div class="text-xs font-medium text-gray-500 mb-1">输入</div>
+                            <div class="bg-gray-50 rounded p-2 text-sm font-mono text-gray-700">
+                                ${typeof inference.input === 'object' ? JSON.stringify(inference.input, null, 2) : inference.input}
+                            </div>
+                        </div>
+
+                        <!-- Rules -->
+                        <div>
+                            <div class="text-xs font-medium text-gray-500 mb-1">触发规则</div>
+                            <div class="flex flex-wrap gap-2">
+                                ${inference.rules.map(rule => `<span class="rule-tag px-2 py-1 bg-${color}-100 text-${color}-700 rounded">${rule}</span>`).join('')}
+                            </div>
+                        </div>
+
+                        <!-- Evidence -->
+                        <div>
+                            <div class="text-xs font-medium text-gray-500 mb-1">证据</div>
+                            <div class="space-y-1">
+                                ${inference.evidence.map(e => `<div class="evidence-item text-sm text-gray-700">${e}</div>`).join('')}
+                            </div>
+                        </div>
+
+                        ${inference.matchedPatterns && inference.matchedPatterns.length > 0 ? `
+                        <!-- Patterns -->
+                        <div>
+                            <div class="text-xs font-medium text-gray-500 mb-1">匹配模式</div>
+                            <div class="flex flex-wrap gap-2">
+                                ${inference.matchedPatterns.map(p => `<code class="pattern-code">${p}</code>`).join('')}
+                            </div>
+                        </div>
+                        ` : ''}
+
+                        <!-- Output -->
+                        <div>
+                            <div class="text-xs font-medium text-gray-500 mb-1">输出</div>
+                            <div class="bg-green-50 rounded p-2 text-sm font-mono text-green-800">
+                                ${typeof inference.output === 'object' ? JSON.stringify(inference.output, null, 2) : inference.output}
+                            </div>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(stepDiv);
+            });
+        }
+
+        function renderFinalDecision() {
+            const container = document.getElementById('finalDecision');
+            const decision = currentLog.finalDecision;
+
+            if (!decision) {
+                container.innerHTML = '<div class="text-gray-500">无最终决策记录</div>';
+                return;
+            }
+
+            const workflowLabels = {
+                studyIntent: '研究意图',
+                domainRoute: '领域路由',
+                deliverableType: '交付类型'
+            };
+
+            container.innerHTML = `
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                    ${Object.entries(decision.workflow || {}).map(([key, value]) => `
+                        <div class="bg-blue-50 rounded-lg p-3">
+                            <div class="text-xs text-blue-600 mb-1">${workflowLabels[key] || key}</div>
+                            <div class="text-sm font-medium text-blue-900">${value}</div>
+                        </div>
+                    `).join('')}
+                </div>
+
+                ${decision.risks && decision.risks.length > 0 ? `
+                <div class="mb-4">
+                    <div class="text-sm font-medium text-red-700 mb-2">风险标记</div>
+                    <ul class="list-disc list-inside text-sm text-red-600 space-y-1">
+                        ${decision.risks.map(r => `<li>${r}</li>`).join('')}
+                    </ul>
+                </div>
+                ` : ''}
+
+                ${decision.gaps && decision.gaps.length > 0 ? `
+                <div>
+                    <div class="text-sm font-medium text-amber-700 mb-2">缺口标记</div>
+                    <ul class="list-disc list-inside text-sm text-amber-600 space-y-1">
+                        ${decision.gaps.map(g => `<li>${g}</li>`).join('')}
+                    </ul>
+                </div>
+                ` : ''}
+            `;
+        }
+
+        function renderExpertPerspectives() {
+            const container = document.getElementById('expertPerspectives');
+
+            // Use expert-config.js if available, otherwise use logged data
+            const expertPanels = window.EXPERT_PANELS || currentLog.expertPerspectives || {};
+
+            container.innerHTML = `
+                <!-- International Experts -->
+                <div>
+                    <h3 class="text-md font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                        <span class="text-xl">🌍</span> 国际专家配置
+                    </h3>
+                    <div class="space-y-3">
+                        ${(expertPanels.international || []).map(expert => `
+                            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                                <div class="font-semibold text-blue-900">${expert.name}</div>
+                                <div class="text-sm text-blue-700 mt-1">${expert.role || expert.credentials}</div>
+                                ${expert.focus ? `
+                                <div class="mt-2 text-xs text-blue-600">
+                                    专注领域: ${Array.isArray(expert.focus) ? expert.focus.join(', ') : expert.focus}
+                                </div>
+                                ` : ''}
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+
+                <!-- Domestic Experts -->
+                <div>
+                    <h3 class="text-md font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                        <span class="text-xl">🇨🇳</span> 国内专家配置
+                    </h3>
+                    <div class="space-y-3">
+                        ${(expertPanels.domestic || []).map(expert => `
+                            <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+                                <div class="font-semibold text-red-900">${expert.name}</div>
+                                <div class="text-sm text-red-700 mt-1">${expert.role || expert.credentials}</div>
+                                ${expert.focus ? `
+                                <div class="mt-2 text-xs text-red-600">
+                                    专注领域: ${Array.isArray(expert.focus) ? expert.focus.join(', ') : expert.focus}
+                                </div>
+                                ` : ''}
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        function toggleCollapsible(id) {
+            const element = document.getElementById(id);
+            element.classList.toggle('open');
+        }
+
+        function exportCurrentLog() {
+            if (!currentLog) {
+                alert('请先选择一个会话');
+                return;
+            }
+
+            const blob = new Blob([JSON.stringify(currentLog, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `decision-log-${currentLog.sessionId}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+    </script>
+</body>
+</html>
