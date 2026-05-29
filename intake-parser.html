@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>猫代谢研究需求评估</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="generation-chain.js"></script>
     <style>
         .toast {
             position: fixed;
@@ -1172,9 +1173,81 @@
                                 页面内显示摘要正文；完整 v1.4 golden output 已按旧业务流质量标准生成，可直接打开长文方案。
                             </div>
                         </div>
-                        <a href="./feline-obesity-protocol-generated-from-rough-need-v1-4-2026-05-27.md?v=572d9f8" target="_blank" class="bg-emerald-700 hover:bg-emerald-800 text-white px-4 py-2 rounded-lg text-sm font-medium">
-                            打开完整 v1.4 方案
-                        </a>
+                        <div class="flex flex-wrap gap-2">
+                            <button onclick="generateProtocolDraft()" id="generateBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium">
+                                生成方案草案
+                            </button>
+                            <a href="./feline-obesity-protocol-generated-from-rough-need-v1-4-2026-05-27.md?v=572d9f8" target="_blank" class="bg-emerald-700 hover:bg-emerald-800 text-white px-4 py-2 rounded-lg text-sm font-medium">
+                                打开完整 v1.4 方案
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Generation Results Section -->
+                    <div id="generationResults" class="hidden mt-4 border-t border-emerald-200 pt-4">
+                        <div class="flex items-center gap-2 mb-3">
+                            <div class="font-semibold text-emerald-900">生成链路执行结果</div>
+                            <span id="qualityBadge" class="px-2 py-1 rounded text-xs font-medium"></span>
+                        </div>
+
+                        <!-- Quality Gate Summary -->
+                        <div id="qualityGateSummary" class="bg-white border border-emerald-100 rounded-lg p-3 mb-3">
+                            <div class="text-sm font-medium text-gray-700 mb-2">质量门检查</div>
+                            <div id="qualityGateDetails" class="text-sm text-gray-600 space-y-1"></div>
+                        </div>
+
+                        <!-- Generation Artifacts Accordion -->
+                        <div class="space-y-2">
+                            <div class="bg-white border border-emerald-100 rounded-lg">
+                                <button onclick="toggleArtifact('intakeJson')" class="w-full flex items-center justify-between p-3 text-left hover:bg-emerald-50">
+                                    <span class="text-sm font-medium text-gray-700">Step 1: Intake JSON</span>
+                                    <span id="intakeJsonToggle" class="text-gray-400">▼</span>
+                                </button>
+                                <div id="intakeJsonContent" class="hidden px-3 pb-3">
+                                    <pre class="text-xs bg-gray-50 p-2 rounded overflow-x-auto"></pre>
+                                </div>
+                            </div>
+
+                            <div class="bg-white border border-emerald-100 rounded-lg">
+                                <button onclick="toggleArtifact('wikiPack')" class="w-full flex items-center justify-between p-3 text-left hover:bg-emerald-50">
+                                    <span class="text-sm font-medium text-gray-700">Step 2: Wiki Evidence Pack</span>
+                                    <span id="wikiPackToggle" class="text-gray-400">▼</span>
+                                </button>
+                                <div id="wikiPackContent" class="hidden px-3 pb-3">
+                                    <pre class="text-xs bg-gray-50 p-2 rounded overflow-x-auto whitespace-pre-wrap"></pre>
+                                </div>
+                            </div>
+
+                            <div class="bg-white border border-emerald-100 rounded-lg">
+                                <button onclick="toggleArtifact('peerReview')" class="w-full flex items-center justify-between p-3 text-left hover:bg-emerald-50">
+                                    <span class="text-sm font-medium text-gray-700">Step 3: Peer Review Critique</span>
+                                    <span id="peerReviewToggle" class="text-gray-400">▼</span>
+                                </button>
+                                <div id="peerReviewContent" class="hidden px-3 pb-3">
+                                    <pre class="text-xs bg-gray-50 p-2 rounded overflow-x-auto whitespace-pre-wrap"></pre>
+                                </div>
+                            </div>
+
+                            <div class="bg-white border border-emerald-100 rounded-lg">
+                                <button onclick="toggleArtifact('framework')" class="w-full flex items-center justify-between p-3 text-left hover:bg-emerald-50">
+                                    <span class="text-sm font-medium text-gray-700">Step 4: ChatGPT Framework</span>
+                                    <span id="frameworkToggle" class="text-gray-400">▼</span>
+                                </button>
+                                <div id="frameworkContent" class="hidden px-3 pb-3">
+                                    <pre class="text-xs bg-gray-50 p-2 rounded overflow-x-auto whitespace-pre-wrap"></pre>
+                                </div>
+                            </div>
+
+                            <div class="bg-white border border-emerald-100 rounded-lg">
+                                <button onclick="toggleArtifact('protocol')" class="w-full flex items-center justify-between p-3 text-left hover:bg-emerald-50">
+                                    <span class="text-sm font-medium text-gray-700">Step 5: Claude Protocol Draft</span>
+                                    <span id="protocolToggle" class="text-gray-400">▼</span>
+                                </button>
+                                <div id="protocolContent" class="hidden px-3 pb-3">
+                                    <pre class="text-xs bg-gray-50 p-2 rounded overflow-x-auto whitespace-pre-wrap"></pre>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     <div class="text-sm text-emerald-800 mt-3 mb-4">
                         以下为页面内正文摘要；完整文件包含 Executive Summary、客户问题拆解、机制和模型取舍、入排、基线包、分组、终点、检测链条、福利伦理、数据分析、失败模式、Sponsor 追问、Evidence Table、Expert Review Checklist 和内部材料 gate。
@@ -2127,6 +2200,87 @@ ${missing.map(m => `- ${m}`).join('\n')}` : ''}
 
             document.getElementById('requestInput').value = request;
             parseRequest();
+        }
+
+        // Generation Chain Integration
+        async function generateProtocolDraft() {
+            if (!currentResult) {
+                showToast('请先生成初步判断，再生成方案草案', true);
+                return;
+            }
+
+            // Check if GenerationChain is available
+            if (typeof GenerationChain === 'undefined') {
+                showToast('生成链路模块未加载，请刷新页面重试', true);
+                return;
+            }
+
+            const btn = document.getElementById('generateBtn');
+            btn.disabled = true;
+            btn.textContent = '生成中...';
+
+            try {
+                const result = await GenerationChain.generate(currentResult);
+                displayGenerationResults(result);
+                showToast('方案草案生成完成');
+            } catch (error) {
+                console.error('Generation failed:', error);
+                showToast('生成失败: ' + error.message, true);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '生成方案草案';
+            }
+        }
+
+        function displayGenerationResults(result) {
+            const resultsSection = document.getElementById('generationResults');
+            resultsSection.classList.remove('hidden');
+
+            // Display quality gate status
+            const badge = document.getElementById('qualityBadge');
+            const qg = result.qualityGate;
+
+            if (qg.result === 'PASS') {
+                badge.className = 'px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-700';
+                badge.textContent = 'PASS';
+            } else if (qg.result === 'WARN') {
+                badge.className = 'px-2 py-1 rounded text-xs font-medium bg-amber-100 text-amber-700';
+                badge.textContent = 'WARN';
+            } else {
+                badge.className = 'px-2 py-1 rounded text-xs font-medium bg-red-100 text-red-700';
+                badge.textContent = 'FAIL';
+            }
+
+            // Display quality gate details
+            const details = document.getElementById('qualityGateDetails');
+            details.innerHTML = `
+                <div>Critical: ${qg.criticalPassed}/${qg.criticalTotal} passed</div>
+                <div>Required: ${qg.requiredPassed}/${qg.requiredTotal} passed</div>
+                <div>Word count: ${qg.wordCount}</div>
+                <div>Placeholders: ${qg.placeholderCount}</div>
+                ${qg.criticalFailures.length > 0 ? `<div class="text-red-600 mt-1">Critical failures: ${qg.criticalFailures.join(', ')}</div>` : ''}
+                ${qg.requiredFailures.length > 0 ? `<div class="text-amber-600 mt-1">Required failures: ${qg.requiredFailures.join(', ')}</div>` : ''}
+            `;
+
+            // Display artifacts (use correct property names from GenerationChain.generate())
+            document.querySelector('#intakeJsonContent pre').textContent =
+                JSON.stringify(result.intakeJSON, null, 2);
+            document.querySelector('#wikiPackContent pre').textContent =
+                JSON.stringify(result.wikiPack, null, 2);
+            document.querySelector('#peerReviewContent pre').textContent =
+                JSON.stringify(result.peerReview, null, 2);
+            document.querySelector('#frameworkContent pre').textContent =
+                JSON.stringify(result.framework, null, 2);
+            document.querySelector('#protocolContent pre').textContent =
+                result.protocol?.content || JSON.stringify(result.protocol, null, 2);
+        }
+
+        function toggleArtifact(artifactId) {
+            const content = document.getElementById(artifactId + 'Content');
+            const toggle = document.getElementById(artifactId + 'Toggle');
+            const isHidden = content.classList.contains('hidden');
+            content.classList.toggle('hidden');
+            toggle.textContent = isHidden ? '▲' : '▼';
         }
 
         // Initialize
