@@ -1,0 +1,929 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>专家驱动方案生成器 | Expert-Driven Protocol Generator</title>
+  <style>
+    :root {
+      --primary: #1976d2;
+      --success: #4caf50;
+      --warning: #ff9800;
+      --error: #f44336;
+      --bg: #f5f5f5;
+      --card: #ffffff;
+      --text: #333333;
+      --text-secondary: #666666;
+      --border: #e0e0e0;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    header {
+      background: var(--primary);
+      color: white;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+
+    header h1 {
+      font-size: 24px;
+      font-weight: 600;
+    }
+
+    header p {
+      opacity: 0.9;
+      margin-top: 5px;
+    }
+
+    .card {
+      background: var(--card);
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .card h2 {
+      font-size: 18px;
+      margin-bottom: 15px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .step-indicator {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 30px;
+      position: relative;
+    }
+
+    .step-indicator::before {
+      content: '';
+      position: absolute;
+      top: 15px;
+      left: 50px;
+      right: 50px;
+      height: 2px;
+      background: var(--border);
+      z-index: 0;
+    }
+
+    .step {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+      z-index: 1;
+    }
+
+    .step-number {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--border);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .step.active .step-number { background: var(--primary); }
+    .step.completed .step-number { background: var(--success); }
+
+    .step-label {
+      font-size: 12px;
+      color: var(--text-secondary);
+      text-align: center;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 150px;
+      padding: 15px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-size: 14px;
+      resize: vertical;
+      font-family: inherit;
+    }
+
+    textarea:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+
+    .btn {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 4px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+    }
+
+    .btn-primary:hover { background: #1565c0; }
+    .btn-primary:disabled { background: #ccc; cursor: not-allowed; }
+
+    .btn-secondary {
+      background: white;
+      color: var(--primary);
+      border: 1px solid var(--primary);
+    }
+
+    .expert-panel {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 15px;
+      margin-top: 15px;
+    }
+
+    .expert-card {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 15px;
+      background: #fafafa;
+    }
+
+    .expert-card.selected {
+      border-color: var(--primary);
+      background: #e3f2fd;
+    }
+
+    .expert-name {
+      font-weight: 600;
+      margin-bottom: 5px;
+    }
+
+    .expert-credentials {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+    }
+
+    .expert-region {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 11px;
+      font-weight: 500;
+    }
+
+    .expert-region.INTL { background: #e8f5e9; color: #2e7d32; }
+    .expert-region.CN { background: #fff3e0; color: #e65100; }
+
+    .generation-step {
+      padding: 15px;
+      margin-bottom: 15px;
+      border-radius: 8px;
+      background: #f8f8f8;
+    }
+
+    .generation-step.pending { border-left: 4px solid var(--border); }
+    .generation-step.running { border-left: 4px solid var(--warning); background: #fff8e1; }
+    .generation-step.completed { border-left: 4px solid var(--success); background: #e8f5e9; }
+    .generation-step.error { border-left: 4px solid var(--error); background: #ffebee; }
+
+    .step-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .step-title {
+      font-weight: 600;
+    }
+
+    .step-status {
+      font-size: 13px;
+      padding: 4px 12px;
+      border-radius: 12px;
+    }
+
+    .step-status.pending { background: var(--border); color: #666; }
+    .step-status.running { background: var(--warning); color: white; }
+    .step-status.completed { background: var(--success); color: white; }
+    .step-status.error { background: var(--error); color: white; }
+
+    .step-output {
+      background: white;
+      padding: 15px;
+      border-radius: 4px;
+      margin-top: 10px;
+      max-height: 400px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      font-size: 13px;
+      font-family: "SF Mono", Consolas, monospace;
+    }
+
+    .output-section {
+      margin-top: 20px;
+    }
+
+    .output-section h3 {
+      margin-bottom: 15px;
+    }
+
+    .final-output {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      border: 2px solid var(--success);
+    }
+
+    .final-output pre {
+      white-space: pre-wrap;
+      font-family: "SF Mono", Consolas, monospace;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .proxy-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 15px;
+      background: #fff;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+
+    .status-dot.online { background: var(--success); }
+    .status-dot.offline { background: var(--error); }
+
+    .api-key-input {
+      display: flex;
+      gap: 10px;
+      margin-top: 15px;
+    }
+
+    .api-key-input input {
+      flex: 1;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-size: 14px;
+    }
+
+    .model-select {
+      padding: 10px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-size: 14px;
+      margin-top: 10px;
+    }
+
+    .hidden { display: none; }
+
+    .loading {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 2px solid #f3f3f3;
+      border-top: 2px solid var(--primary);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-right: 8px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .knowledge-context {
+      background: #f0f7ff;
+      padding: 15px;
+      border-radius: 8px;
+      margin-top: 15px;
+      font-size: 13px;
+    }
+
+    .knowledge-context h4 {
+      margin-bottom: 10px;
+      color: var(--primary);
+    }
+
+    .action-buttons {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="container">
+      <h1>专家驱动方案生成器</h1>
+      <p>Expert-Driven Protocol Generator | 基于专家视角的临床前试验方案生成</p>
+    </div>
+  </header>
+
+  <div class="container">
+    <!-- Proxy Status -->
+    <div class="proxy-status">
+      <div class="status-dot" id="proxyStatus"></div>
+      <span id="proxyStatusText">检查代理服务状态...</span>
+      <a href="http://localhost:3456/dashboard.html" target="_blank" style="margin-left: auto;">打开请求队列</a>
+    </div>
+
+    <!-- Step Indicator -->
+    <div class="step-indicator">
+      <div class="step active" id="step1-indicator">
+        <div class="step-number">1</div>
+        <div class="step-label">输入需求</div>
+      </div>
+      <div class="step" id="step2-indicator">
+        <div class="step-number">2</div>
+        <div class="step-label">专家遴选</div>
+      </div>
+      <div class="step" id="step3-indicator">
+        <div class="step-number">3</div>
+        <div class="step-label">同行评审</div>
+      </div>
+      <div class="step" id="step4-indicator">
+        <div class="step-number">4</div>
+        <div class="step-label">框架生成</div>
+      </div>
+      <div class="step" id="step5-indicator">
+        <div class="step-number">5</div>
+        <div class="step-label">完整方案</div>
+      </div>
+    </div>
+
+    <!-- Step 1: Input -->
+    <div class="card" id="step1-card">
+      <h2>步骤 1：输入客户模糊需求</h2>
+      <textarea id="roughNeed" placeholder="请输入客户的模糊需求，例如：
+
+希望围绕猫代谢改善，以GLP-1受体激动剂为核心，设计临床前药效试验方案，包括肥胖猫DIO模型建立和以减重为核心关注点的试验设计..."></textarea>
+
+      <div class="knowledge-context hidden" id="knowledgeContext">
+        <h4>知识库检索结果</h4>
+        <div id="knowledgeContent"></div>
+      </div>
+
+      <div class="action-buttons">
+        <button class="btn btn-primary" onclick="startGeneration()">开始生成</button>
+        <button class="btn btn-secondary" onclick="searchKnowledge()">检索知识库</button>
+      </div>
+    </div>
+
+    <!-- API Key & Model Selection -->
+    <div class="card" id="apiConfig">
+      <h2>API 配置</h2>
+      <p style="color: var(--text-secondary); margin-bottom: 15px;">
+        请输入您的 OpenRouter API Key。API Key 仅在本地使用，不会上传到任何服务器。
+      </p>
+      <div class="api-key-input">
+        <input type="password" id="apiKey" placeholder="sk-or-..." />
+        <button class="btn btn-secondary" onclick="saveApiKey()">保存</button>
+      </div>
+      <div style="margin-top: 15px;">
+        <label>选择模型：</label>
+        <select class="model-select" id="modelSelect">
+          <option value="anthropic/claude-sonnet-4">Claude Sonnet 4 (推荐)</option>
+          <option value="anthropic/claude-opus-4">Claude Opus 4 (最高质量)</option>
+          <option value="openai/gpt-4o">GPT-4o</option>
+          <option value="openai/gpt-4-turbo">GPT-4 Turbo</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Generation Steps -->
+    <div class="card hidden" id="generationCard">
+      <h2>生成进度</h2>
+
+      <div class="generation-step pending" id="gen-step1">
+        <div class="step-header">
+          <span class="step-title">1. 专家遴选 (Expert Selection)</span>
+          <span class="step-status pending" id="gen-step1-status">待执行</span>
+        </div>
+        <p style="color: var(--text-secondary); font-size: 13px;">根据需求领域选择合适的国内外专家团队</p>
+        <div class="step-output hidden" id="gen-step1-output"></div>
+      </div>
+
+      <div class="generation-step pending" id="gen-step2">
+        <div class="step-header">
+          <span class="step-title">2. 国际专家同行评审 (International Peer Review)</span>
+          <span class="step-status pending" id="gen-step2-status">待执行</span>
+        </div>
+        <p style="color: var(--text-secondary); font-size: 13px;">以国际专家视角审视需求，提出关键问题和建议</p>
+        <div class="step-output hidden" id="gen-step2-output"></div>
+      </div>
+
+      <div class="generation-step pending" id="gen-step3">
+        <div class="step-header">
+          <span class="step-title">3. 国内专家交叉验证 (Domestic Expert Review)</span>
+          <span class="step-status pending" id="gen-step3-status">待执行</span>
+        </div>
+        <p style="color: var(--text-secondary); font-size: 13px;">国内专家结合本土实际情况进行交叉验证</p>
+        <div class="step-output hidden" id="gen-step3-output"></div>
+      </div>
+
+      <div class="generation-step pending" id="gen-step4">
+        <div class="step-header">
+          <span class="step-title">4. 框架生成 (Framework Generation)</span>
+          <span class="step-status pending" id="gen-step4-status">待执行</span>
+        </div>
+        <p style="color: var(--text-secondary); font-size: 13px;">整合专家意见，生成试验方案框架</p>
+        <div class="step-output hidden" id="gen-step4-output"></div>
+      </div>
+
+      <div class="generation-step pending" id="gen-step5">
+        <div class="step-header">
+          <span class="step-title">5. 完整方案 (Complete Protocol)</span>
+          <span class="step-status pending" id="gen-step5-status">待执行</span>
+        </div>
+        <p style="color: var(--text-secondary); font-size: 13px;">生成包含所有细节的完整临床前试验方案</p>
+        <div class="step-output hidden" id="gen-step5-output"></div>
+      </div>
+    </div>
+
+    <!-- Final Output -->
+    <div class="card hidden" id="finalCard">
+      <h2>生成完成</h2>
+      <div class="output-section">
+        <h3>完整临床前试验方案</h3>
+        <div class="final-output">
+          <pre id="finalOutput"></pre>
+        </div>
+        <div class="action-buttons">
+          <button class="btn btn-primary" onclick="copyOutput()">复制方案</button>
+          <button class="btn btn-secondary" onclick="downloadOutput()">下载 Markdown</button>
+          <button class="btn btn-secondary" onclick="resetGenerator()">重新生成</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Constants
+    const PROXY_URL = 'http://localhost:3456';
+
+    // State
+    let state = {
+      roughNeed: '',
+      knowledgeContext: '',
+      selectedExperts: [],
+      generationResults: {},
+      currentStep: 1
+    };
+
+    // Check proxy status on load
+    async function checkProxyStatus() {
+      const dot = document.getElementById('proxyStatus');
+      const text = document.getElementById('proxyStatusText');
+
+      try {
+        const res = await fetch(`${PROXY_URL}/health`);
+        const data = await res.json();
+
+        if (data.status === 'ok') {
+          dot.className = 'status-dot online';
+          text.textContent = `代理服务运行中 | 知识库: ${data.kbExists ? '已连接' : '未找到'} | 待处理请求: ${data.pendingRequests}`;
+        } else {
+          throw new Error('Status not ok');
+        }
+      } catch (e) {
+        dot.className = 'status-dot offline';
+        text.innerHTML = `代理服务未运行。请先启动: <code>cd proxy && npm start</code>`;
+      }
+    }
+
+    // Search knowledge base
+    async function searchKnowledge() {
+      const query = document.getElementById('roughNeed').value.trim();
+      if (!query) {
+        alert('请先输入需求');
+        return;
+      }
+
+      try {
+        const res = await fetch(`${PROXY_URL}/api/knowledge/search`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query })
+        });
+
+        const data = await res.json();
+
+        if (data.context) {
+          state.knowledgeContext = data.context;
+          document.getElementById('knowledgeContext').classList.remove('hidden');
+          document.getElementById('knowledgeContent').textContent = data.context;
+        }
+      } catch (e) {
+        alert('知识库检索失败: ' + e.message);
+      }
+    }
+
+    // Save API key to localStorage
+    function saveApiKey() {
+      const key = document.getElementById('apiKey').value.trim();
+      if (key) {
+        localStorage.setItem('openrouter_api_key', key);
+        alert('API Key 已保存');
+      }
+    }
+
+    // Load API key from localStorage
+    function loadApiKey() {
+      const key = localStorage.getItem('openrouter_api_key');
+      if (key) {
+        document.getElementById('apiKey').value = key;
+      }
+    }
+
+    // Start generation workflow
+    async function startGeneration() {
+      state.roughNeed = document.getElementById('roughNeed').value.trim();
+
+      if (!state.roughNeed) {
+        alert('请输入客户需求');
+        return;
+      }
+
+      const apiKey = document.getElementById('apiKey').value.trim();
+      if (!apiKey) {
+        alert('请先输入 API Key');
+        return;
+      }
+
+      // Show generation card
+      document.getElementById('generationCard').classList.remove('hidden');
+
+      // Run generation steps
+      await runStep1_ExpertSelection(apiKey);
+      await runStep2_InternationalReview(apiKey);
+      await runStep3_DomesticReview(apiKey);
+      await runStep4_FrameworkGeneration(apiKey);
+      await runStep5_CompleteProtocol(apiKey);
+
+      // Show final output
+      showFinalOutput();
+    }
+
+    // Step 1: Expert Selection
+    async function runStep1_ExpertSelection(apiKey) {
+      updateStepStatus('gen-step1', 'running');
+      updateIndicator(2);
+
+      try {
+        // Get experts from proxy
+        const res = await fetch(`${PROXY_URL}/api/experts`);
+        const expertPool = await res.json();
+
+        // Select metabolism experts
+        const metabolismExperts = expertPool.metabolism?.experts || [];
+        state.selectedExperts = metabolismExperts;
+
+        let output = '## 已选择的专家团队\n\n';
+        const intl = metabolismExperts.filter(e => e.region === 'INTL');
+        const cn = metabolismExperts.filter(e => e.region === 'CN');
+
+        output += '### 国际专家\n';
+        for (const e of intl) {
+          output += `- **${e.fullName}**\n  专长: ${e.specialty.join('、')}\n\n`;
+        }
+
+        output += '### 国内专家\n';
+        for (const e of cn) {
+          output += `- **${e.fullName}**\n  专长: ${e.specialty.join('、')}\n\n`;
+        }
+
+        state.generationResults.step1 = output;
+        showStepOutput('gen-step1', output);
+        updateStepStatus('gen-step1', 'completed');
+      } catch (e) {
+        updateStepStatus('gen-step1', 'error');
+        showStepOutput('gen-step1', '错误: ' + e.message);
+        throw e;
+      }
+    }
+
+    // Step 2: International Peer Review
+    async function runStep2_InternationalReview(apiKey) {
+      updateStepStatus('gen-step2', 'running');
+      updateIndicator(3);
+
+      const model = document.getElementById('modelSelect').value;
+      const intlExperts = state.selectedExperts.filter(e => e.region === 'INTL');
+
+      // Build prompt with expert perspectives
+      let expertContext = '';
+      for (const e of intlExperts) {
+        expertContext += `${e.promptRole}\n\n`;
+      }
+
+      const prompt = `${expertContext}
+
+作为以上专家团队，请审视以下客户需求，从国际前沿研究的角度提出：
+1. 关键科学问题的界定
+2. 研究设计的建议
+3. 需要关注的风险点
+4. 与已有文献/研究的关联
+
+${state.knowledgeContext ? '## 相关知识库参考\n' + state.knowledgeContext + '\n\n' : ''}
+## 客户需求
+${state.roughNeed}
+
+请用中文回复，保持专业且具体。`;
+
+      try {
+        const result = await callLLMWithConfirmation(apiKey, model, prompt, 'step2-international-review');
+        state.generationResults.step2 = result;
+        showStepOutput('gen-step2', result);
+        updateStepStatus('gen-step2', 'completed');
+      } catch (e) {
+        updateStepStatus('gen-step2', 'error');
+        showStepOutput('gen-step2', '错误: ' + e.message);
+        throw e;
+      }
+    }
+
+    // Step 3: Domestic Expert Review
+    async function runStep3_DomesticReview(apiKey) {
+      updateStepStatus('gen-step3', 'running');
+      updateIndicator(4);
+
+      const model = document.getElementById('modelSelect').value;
+      const cnExperts = state.selectedExperts.filter(e => e.region === 'CN');
+
+      // Build prompt with expert perspectives
+      let expertContext = '';
+      for (const e of cnExperts) {
+        expertContext += `${e.promptRole}\n\n`;
+      }
+
+      const prompt = `${expertContext}
+
+作为以上国内专家团队，请对客户需求和国际专家的评审意见进行交叉验证：
+1. 从中国实际情况出发，评估可行性
+2. 补充国内相关研究和实践经验
+3. 指出可能需要调整的地方
+4. 提出具体的实施建议
+
+## 客户需求
+${state.roughNeed}
+
+## 国际专家评审意见
+${state.generationResults.step2}
+
+请用中文回复，结合中国宠物医学的实际情况。`;
+
+      try {
+        const result = await callLLMWithConfirmation(apiKey, model, prompt, 'step3-domestic-review');
+        state.generationResults.step3 = result;
+        showStepOutput('gen-step3', result);
+        updateStepStatus('gen-step3', 'completed');
+      } catch (e) {
+        updateStepStatus('gen-step3', 'error');
+        showStepOutput('gen-step3', '错误: ' + e.message);
+        throw e;
+      }
+    }
+
+    // Step 4: Framework Generation
+    async function runStep4_FrameworkGeneration(apiKey) {
+      updateStepStatus('gen-step4', 'running');
+      updateIndicator(5);
+
+      const model = document.getElementById('modelSelect').value;
+
+      const prompt = `请根据以下专家评审意见，生成一份结构化的临床前药效试验方案框架。
+
+## 客户需求
+${state.roughNeed}
+
+## 国际专家评审
+${state.generationResults.step2}
+
+## 国内专家交叉验证
+${state.generationResults.step3}
+
+请生成包含以下章节的方案框架：
+1. 执行摘要
+2. 研究背景与目的
+3. 研究设计概述
+4. 动物模型选择与建立
+5. 给药方案
+6. 观察指标
+7. 统计分析计划
+8. 伦理与福利
+9. 风险评估与应对
+10. 时间线与里程碑
+
+每个章节只需要提供结构和关键要点，不需要展开细节。`;
+
+      try {
+        const result = await callLLMWithConfirmation(apiKey, model, prompt, 'step4-framework');
+        state.generationResults.step4 = result;
+        showStepOutput('gen-step4', result);
+        updateStepStatus('gen-step4', 'completed');
+      } catch (e) {
+        updateStepStatus('gen-step4', 'error');
+        showStepOutput('gen-step4', '错误: ' + e.message);
+        throw e;
+      }
+    }
+
+    // Step 5: Complete Protocol
+    async function runStep5_CompleteProtocol(apiKey) {
+      updateStepStatus('gen-step5', 'running');
+
+      // Use Opus for final generation
+      const model = 'anthropic/claude-opus-4';
+
+      // Find lead expert for perspective
+      const leadExpert = state.selectedExperts.find(e => e.id === 'xia-zhaofei') ||
+                         state.selectedExperts.find(e => e.region === 'CN');
+
+      const prompt = `${leadExpert ? leadExpert.promptRole : '你是一位资深的宠物临床前研究专家。'}
+
+请基于以下框架和专家评审意见，输出一份**完整的**临床前药效试验方案。
+
+## 质量要求
+- 方案应不少于400行
+- 至少包含15个章节
+- 必须包含：统计学设计、伦理审查、风险评估
+- 每个章节应有具体、可执行的内容
+- 数据应有依据，方法应具体可操作
+
+## 方案框架
+${state.generationResults.step4}
+
+## 国际专家评审要点
+${state.generationResults.step2}
+
+## 国内专家建议
+${state.generationResults.step3}
+
+${state.knowledgeContext ? '## 知识库参考\n' + state.knowledgeContext + '\n\n' : ''}
+
+请用中文输出完整方案，格式为 Markdown。方案应达到可直接用于内部评审的质量标准。`;
+
+      try {
+        const result = await callLLMWithConfirmation(apiKey, model, prompt, 'step5-complete-protocol');
+        state.generationResults.step5 = result;
+        showStepOutput('gen-step5', result);
+        updateStepStatus('gen-step5', 'completed');
+      } catch (e) {
+        updateStepStatus('gen-step5', 'error');
+        showStepOutput('gen-step5', '错误: ' + e.message);
+        throw e;
+      }
+    }
+
+    // Call LLM with confirmation flow
+    async function callLLMWithConfirmation(apiKey, model, prompt, step) {
+      // Create pending request
+      const createRes = await fetch(`${PROXY_URL}/api/generate/request`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model, prompt, step })
+      });
+
+      const createData = await createRes.json();
+      const requestId = createData.requestId;
+
+      // Auto-confirm (in auto mode)
+      const confirmRes = await fetch(`${PROXY_URL}/api/generate/confirm/${requestId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ apiKey })
+      });
+
+      const confirmData = await confirmRes.json();
+
+      if (confirmData.status === 'completed') {
+        return confirmData.result;
+      } else {
+        throw new Error(confirmData.error || 'Generation failed');
+      }
+    }
+
+    // Update step status UI
+    function updateStepStatus(stepId, status) {
+      const stepEl = document.getElementById(stepId);
+      const statusEl = document.getElementById(stepId + '-status');
+
+      stepEl.className = 'generation-step ' + status;
+      statusEl.className = 'step-status ' + status;
+
+      const statusText = {
+        pending: '待执行',
+        running: '执行中...',
+        completed: '已完成',
+        error: '出错'
+      };
+
+      statusEl.textContent = statusText[status] || status;
+    }
+
+    // Update step indicator
+    function updateIndicator(activeStep) {
+      for (let i = 1; i <= 5; i++) {
+        const el = document.getElementById('step' + i + '-indicator');
+        el.className = 'step';
+        if (i < activeStep) {
+          el.classList.add('completed');
+        } else if (i === activeStep) {
+          el.classList.add('active');
+        }
+      }
+    }
+
+    // Show step output
+    function showStepOutput(stepId, content) {
+      const outputEl = document.getElementById(stepId + '-output');
+      outputEl.classList.remove('hidden');
+      outputEl.textContent = content;
+    }
+
+    // Show final output
+    function showFinalOutput() {
+      document.getElementById('finalCard').classList.remove('hidden');
+      document.getElementById('finalOutput').textContent = state.generationResults.step5 || '生成失败';
+    }
+
+    // Copy output to clipboard
+    function copyOutput() {
+      navigator.clipboard.writeText(state.generationResults.step5 || '');
+      alert('已复制到剪贴板');
+    }
+
+    // Download output as markdown
+    function downloadOutput() {
+      const content = state.generationResults.step5 || '';
+      const blob = new Blob([content], { type: 'text/markdown' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `protocol-${new Date().toISOString().slice(0, 10)}.md`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    // Reset generator
+    function resetGenerator() {
+      state = {
+        roughNeed: '',
+        knowledgeContext: '',
+        selectedExperts: [],
+        generationResults: {},
+        currentStep: 1
+      };
+
+      document.getElementById('roughNeed').value = '';
+      document.getElementById('knowledgeContext').classList.add('hidden');
+      document.getElementById('generationCard').classList.add('hidden');
+      document.getElementById('finalCard').classList.add('hidden');
+
+      // Reset step indicators
+      updateIndicator(1);
+
+      // Reset generation steps
+      for (let i = 1; i <= 5; i++) {
+        updateStepStatus('gen-step' + i, 'pending');
+        document.getElementById('gen-step' + i + '-output').classList.add('hidden');
+      }
+    }
+
+    // Initialize
+    checkProxyStatus();
+    loadApiKey();
+    setInterval(checkProxyStatus, 10000);
+  </script>
+</body>
+</html>
