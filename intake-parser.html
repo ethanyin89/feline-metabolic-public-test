@@ -1188,6 +1188,10 @@
                             <button onclick="generateProtocolDraft()" id="generateBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium">
                                 生成方案草案
                             </button>
+                            <button onclick="handoffToProtocolGenerator()" id="handoffBtn" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-1">
+                                <span>🧬</span>
+                                <span>专家驱动生成器</span>
+                            </button>
                             <a href="./feline-obesity-protocol-generated-from-rough-need-v1-4-2026-05-27.md?v=572d9f8" target="_blank" class="bg-emerald-700 hover:bg-emerald-800 text-white px-4 py-2 rounded-lg text-sm font-medium">
                                 打开完整 v1.4 方案
                             </a>
@@ -2308,6 +2312,60 @@ ${missing.map(m => `- ${m}`).join('\n')}` : ''}
 
             document.getElementById('requestInput').value = request;
             parseRequest();
+        }
+
+        // Decision Chain Handoff to Protocol Generator
+        function handoffToProtocolGenerator() {
+            if (!currentResult) {
+                showToast('请先生成初步判断，再进入专家驱动生成器', true);
+                return;
+            }
+
+            // Build the handoff context with all relevant decision data
+            const handoffContext = {
+                version: '1.0',
+                timestamp: new Date().toISOString(),
+                source: 'intake-parser',
+                source_url: buildDecisionPathUrl(),
+
+                // Raw input
+                raw_request: currentResult.raw_request || document.getElementById('requestInput')?.value.trim() || '',
+
+                // Parsed elements
+                parsed_elements: getParsedElements(currentResult),
+
+                // Classification matrix
+                matrix_classification: getMatrixClassification(currentResult),
+
+                // Decision workflow
+                decision_workflow: inferDecisionWorkflow(currentResult),
+
+                // Model recommendations
+                model_recommendation: currentResult.model_recommendation || {},
+                endpoint_suggestions: currentResult.endpoint_suggestions || {},
+
+                // Risk and gaps
+                risk_flags: currentResult.risk_flags || [],
+                missing_critical: currentResult.missing_critical || currentResult.missing_fields || [],
+                clarification_questions: currentResult.clarification_questions || [],
+
+                // Decision audit info
+                decision_check: currentResult.decision_check || { confirmed: false },
+                session_id: window.decisionLog?.sessionId || null,
+
+                // Knowledge base context
+                knowledge_base_manifest: [
+                    'feline-research-os/topics/obesity/mechanism-overview.md',
+                    'feline-research-os/topics/obesity/diabetes-bridge-bilingual.md',
+                    'feline-research-os/topics/diabetes/endpoint-handbook.md'
+                ]
+            };
+
+            // Store in localStorage for handoff
+            localStorage.setItem('protocol_generator_handoff', JSON.stringify(handoffContext));
+
+            // Navigate to protocol generator with handoff flag
+            window.location.href = 'protocol-generator.html?handoff=intake-parser';
         }
 
         // Generation Chain Integration

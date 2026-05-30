@@ -337,13 +337,62 @@
       gap: 10px;
       margin-top: 20px;
     }
+
+    /* Handoff Context Styles */
+    #handoffContextCard h2 {
+      font-size: 16px;
+      color: #6b21a8;
+      margin-bottom: 15px;
+      border-bottom: none;
+    }
+
+    .handoff-summary {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .handoff-row {
+      display: flex;
+      gap: 10px;
+      font-size: 14px;
+    }
+
+    .handoff-label {
+      color: #666;
+      min-width: 80px;
+      flex-shrink: 0;
+    }
+
+    .handoff-value {
+      color: #333;
+      font-weight: 500;
+    }
+
+    .handoff-value.risk {
+      color: #dc2626;
+    }
+
+    .handoff-link {
+      color: #9333ea;
+      text-decoration: none;
+    }
+
+    .handoff-link:hover {
+      text-decoration: underline;
+    }
   </style>
 </head>
 <body>
   <header>
-    <div class="container">
-      <h1>专家驱动方案生成器</h1>
-      <p>Expert-Driven Protocol Generator | 基于专家视角的临床前试验方案生成</p>
+    <div class="container" style="display: flex; justify-content: space-between; align-items: center;">
+      <div>
+        <h1>专家驱动方案生成器</h1>
+        <p>Expert-Driven Protocol Generator | 基于专家视角的临床前试验方案生成</p>
+      </div>
+      <a href="intake-parser.html" style="color: rgba(255,255,255,0.8); text-decoration: none; font-size: 14px;">
+        ← 返回需求解析器
+      </a>
     </div>
   </header>
 
@@ -377,6 +426,11 @@
         <div class="step-number">5</div>
         <div class="step-label">完整方案</div>
       </div>
+    </div>
+
+    <!-- Handoff Context Card (shown when coming from intake-parser) -->
+    <div class="card hidden" id="handoffContextCard" style="background: linear-gradient(135deg, #f3e7ff 0%, #e8f4fd 100%); border-left: 4px solid #9333ea;">
+      <!-- Filled dynamically by showHandoffContext() -->
     </div>
 
     <!-- Step 1: Input -->
@@ -495,8 +549,94 @@
       knowledgeContext: '',
       selectedExperts: [],
       generationResults: {},
-      currentStep: 1
+      currentStep: 1,
+      handoffContext: null  // Context from intake-parser handoff
     };
+
+    // Check for handoff from intake-parser
+    function checkHandoff() {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('handoff') !== 'intake-parser') return;
+
+      const handoffData = localStorage.getItem('protocol_generator_handoff');
+      if (!handoffData) {
+        console.warn('Handoff flag present but no handoff data found');
+        return;
+      }
+
+      try {
+        const context = JSON.parse(handoffData);
+        state.handoffContext = context;
+
+        // Pre-fill the rough need textarea
+        if (context.raw_request) {
+          document.getElementById('roughNeed').value = context.raw_request;
+          state.roughNeed = context.raw_request;
+        }
+
+        // Show handoff context card
+        showHandoffContext(context);
+
+        // Clear the handoff data after loading (one-time use)
+        localStorage.removeItem('protocol_generator_handoff');
+
+        console.log('Handoff context loaded from intake-parser:', context);
+      } catch (e) {
+        console.error('Failed to parse handoff data:', e);
+      }
+    }
+
+    // Display handoff context in the UI
+    function showHandoffContext(context) {
+      const container = document.getElementById('handoffContextCard');
+      if (!container) return;
+
+      const pe = context.parsed_elements || {};
+      const matrix = context.matrix_classification || {};
+      const workflow = context.decision_workflow || {};
+      const model = context.model_recommendation || {};
+      const risks = context.risk_flags || [];
+      const missing = context.missing_critical || [];
+
+      container.classList.remove('hidden');
+      container.innerHTML = `
+        <h2>📋 决策链路上下文 (Intake Parser)</h2>
+        <div class="handoff-summary">
+          <div class="handoff-row">
+            <span class="handoff-label">分类矩阵:</span>
+            <span class="handoff-value">${matrix.axisA || 'N/A'} × ${matrix.axisB || 'N/A'} → ${matrix.level || 'N/A'}</span>
+          </div>
+          <div class="handoff-row">
+            <span class="handoff-label">药物类型:</span>
+            <span class="handoff-value">${pe.drug_type || 'N/A'}</span>
+          </div>
+          <div class="handoff-row">
+            <span class="handoff-label">靶基因:</span>
+            <span class="handoff-value">${pe.target_gene || 'N/A'}</span>
+          </div>
+          <div class="handoff-row">
+            <span class="handoff-label">模型建议:</span>
+            <span class="handoff-value">${model.recommended || 'N/A'}</span>
+          </div>
+          ${risks.length > 0 ? `
+          <div class="handoff-row">
+            <span class="handoff-label">风险提示:</span>
+            <span class="handoff-value risk">${risks.join(', ')}</span>
+          </div>
+          ` : ''}
+          ${missing.length > 0 ? `
+          <div class="handoff-row">
+            <span class="handoff-label">待确认:</span>
+            <span class="handoff-value">${missing.slice(0, 3).join(', ')}${missing.length > 3 ? '...' : ''}</span>
+          </div>
+          ` : ''}
+          <div class="handoff-row">
+            <span class="handoff-label">来源:</span>
+            <a href="${context.source_url || '#'}" target="_blank" class="handoff-link">查看原始决策路径</a>
+          </div>
+        </div>
+      `;
+    }
 
     // Check proxy status on load
     async function checkProxyStatus() {
@@ -561,6 +701,45 @@
       if (key) {
         document.getElementById('apiKey').value = key;
       }
+    }
+
+    // Build decision context string from handoff data
+    function buildDecisionContextString() {
+      if (!state.handoffContext) return '';
+
+      const ctx = state.handoffContext;
+      const pe = ctx.parsed_elements || {};
+      const matrix = ctx.matrix_classification || {};
+      const model = ctx.model_recommendation || {};
+      const risks = ctx.risk_flags || [];
+      const missing = ctx.missing_critical || [];
+
+      let contextStr = '## 前置决策链路分析 (Intake Parser)\n\n';
+      contextStr += `**分类矩阵:** ${matrix.axisA || 'N/A'} × ${matrix.axisB || 'N/A'} → ${matrix.level || 'N/A'}\n\n`;
+
+      contextStr += '**已识别要素:**\n';
+      if (pe.drug_type) contextStr += `- 药物类型: ${pe.drug_type}\n`;
+      if (pe.target_gene) contextStr += `- 靶基因: ${pe.target_gene}\n`;
+      if (pe.target_indication) contextStr += `- 适应症方向: ${pe.target_indication}\n`;
+      if (pe.study_intent) contextStr += `- 研究目的: ${pe.study_intent}\n`;
+      if (pe.dosing_route) contextStr += `- 给药途径: ${pe.dosing_route}\n`;
+      contextStr += '\n';
+
+      if (model.recommended) {
+        contextStr += `**模型建议:** ${model.recommended}\n`;
+        if (model.reason) contextStr += `**建议理由:** ${model.reason}\n`;
+        contextStr += '\n';
+      }
+
+      if (risks.length > 0) {
+        contextStr += `**风险提示:** ${risks.join('; ')}\n\n`;
+      }
+
+      if (missing.length > 0) {
+        contextStr += `**待确认信息:** ${missing.join('; ')}\n\n`;
+      }
+
+      return contextStr;
     }
 
     // Start generation workflow
@@ -644,6 +823,7 @@
         expertContext += `${e.promptRole}\n\n`;
       }
 
+      const decisionContext = buildDecisionContextString();
       const prompt = `${expertContext}
 
 作为以上专家团队，请审视以下客户需求，从国际前沿研究的角度提出：
@@ -652,7 +832,7 @@
 3. 需要关注的风险点
 4. 与已有文献/研究的关联
 
-${state.knowledgeContext ? '## 相关知识库参考\n' + state.knowledgeContext + '\n\n' : ''}
+${decisionContext}${state.knowledgeContext ? '## 相关知识库参考\n' + state.knowledgeContext + '\n\n' : ''}
 ## 客户需求
 ${state.roughNeed}
 
@@ -923,6 +1103,7 @@ ${state.knowledgeContext ? '## 知识库参考\n' + state.knowledgeContext + '\n
     // Initialize
     checkProxyStatus();
     loadApiKey();
+    checkHandoff();  // Check for handoff from intake-parser
     setInterval(checkProxyStatus, 10000);
   </script>
 </body>
