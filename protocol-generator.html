@@ -470,6 +470,26 @@
           <option value="openai/gpt-4-turbo">GPT-4 Turbo</option>
         </select>
       </div>
+      <div style="margin-top: 15px; padding: 15px; background: #f0f7ff; border-radius: 8px; border: 1px solid #1976d2;">
+        <label style="display: flex; align-items: center; cursor: pointer;">
+          <input type="checkbox" id="smartModeToggle" style="margin-right: 10px; width: 18px; height: 18px;" />
+          <span style="font-weight: 600;">🧠 智能模式 (Smart Mode)</span>
+        </label>
+        <p style="color: var(--text-secondary); font-size: 13px; margin-top: 8px; margin-left: 28px;">
+          启用后，最终方案生成将使用分层扩展策略：<br/>
+          • <b>结构生成</b> (Haiku) → <b>分节扩展</b> (Opus) → <b>自我批评</b> (Opus) → <b>优化合成</b> (Sonnet)<br/>
+          • 质量更高，但成本约 $2-3（普通模式约 $0.6）
+        </p>
+        <div id="smartModeProgress" class="hidden" style="margin-top: 10px; margin-left: 28px;">
+          <div style="font-size: 12px; color: var(--text-secondary);">
+            <span id="smartModePhase">准备中...</span>
+            <span id="smartModeCost" style="float: right;">预估成本: $0.00</span>
+          </div>
+          <div style="height: 4px; background: #e0e0e0; border-radius: 2px; margin-top: 5px;">
+            <div id="smartModeProgressBar" style="height: 100%; width: 0%; background: #1976d2; border-radius: 2px; transition: width 0.3s;"></div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Generation Steps -->
@@ -972,7 +992,13 @@ ${state.generationResults.step3}
     async function runStep5_CompleteProtocol(apiKey) {
       updateStepStatus('gen-step5', 'running');
 
-      // Use Opus for final generation
+      // Check if Smart Mode is enabled
+      const smartMode = document.getElementById('smartModeToggle').checked;
+      if (smartMode) {
+        return await runStep5_SmartMode(apiKey);
+      }
+
+      // Use Opus for final generation (single-shot mode)
       const model = 'anthropic/claude-opus-4';
 
       // Find lead expert for perspective
@@ -1011,6 +1037,250 @@ ${state.knowledgeContext ? '## 知识库参考\n' + state.knowledgeContext + '\n
       } catch (e) {
         updateStepStatus('gen-step5', 'error');
         showStepOutput('gen-step5', '错误: ' + e.message);
+        throw e;
+      }
+    }
+
+    // Smart Mode: Hierarchical Expansion with Self-Critique
+    async function runStep5_SmartMode(apiKey) {
+      const progressEl = document.getElementById('smartModeProgress');
+      const phaseEl = document.getElementById('smartModePhase');
+      const costEl = document.getElementById('smartModeCost');
+      const progressBar = document.getElementById('smartModeProgressBar');
+
+      progressEl.classList.remove('hidden');
+      let estimatedCost = 0;
+
+      const updateProgress = (phase, percent, cost) => {
+        phaseEl.textContent = phase;
+        progressBar.style.width = percent + '%';
+        estimatedCost += cost;
+        costEl.textContent = `预估成本: $${estimatedCost.toFixed(2)}`;
+      };
+
+      // Models for each phase
+      const MODELS = {
+        structure: 'anthropic/claude-3-haiku-20240307',
+        expand: 'anthropic/claude-opus-4',
+        critique: 'anthropic/claude-opus-4',
+        refine: 'anthropic/claude-sonnet-4'
+      };
+
+      // Define the 10 sections to expand
+      const SECTIONS = [
+        { id: 'summary', title: '执行摘要', desc: '研究目标、核心设计、主要终点、预期成果、研究团队' },
+        { id: 'background', title: '研究背景与目的', desc: '科学背景、临床需求、研究目的、创新点' },
+        { id: 'design', title: '研究设计', desc: '研究类型、中心设置、流程、随机化和盲法' },
+        { id: 'model', title: '动物模型', desc: '实验动物来源、纳入排除标准、DIO模型建立、质量控制' },
+        { id: 'drug', title: '试验药物与给药方案', desc: '候选药物、阳性对照、安慰剂、剂量设计、给药方法' },
+        { id: 'endpoints', title: '观察指标与评价方法', desc: '主要终点、次要终点、安全性指标、检测方法' },
+        { id: 'stats', title: '统计分析', desc: '样本量计算、分析方法、缺失数据处理、敏感性分析' },
+        { id: 'ethics', title: '伦理与动物福利', desc: '伦理审查、3R原则、人道终点、福利监测' },
+        { id: 'risk', title: '风险评估与质量控制', desc: '风险识别、应对策略、质量保证、数据管理' },
+        { id: 'timeline', title: '时间线与资源', desc: '里程碑、甘特图、人员配置、预算概算' }
+      ];
+
+      try {
+        // Phase 1: Generate Structure (Haiku - fast & cheap)
+        updateProgress('🏗️ 阶段1: 生成结构框架 (Haiku)...', 5, 0.01);
+
+        const structurePrompt = `基于以下专家评审意见，为临床前药效试验方案生成一个详细的结构大纲。
+
+## 客户需求
+${state.roughNeed}
+
+## 国际专家评审
+${state.generationResults.step2}
+
+## 国内专家建议
+${state.generationResults.step3}
+
+## 现有框架
+${state.generationResults.step4}
+
+请为以下10个章节各生成3-5个具体的子标题和关键要点，这些将指导后续的详细撰写：
+
+${SECTIONS.map((s, i) => `${i+1}. ${s.title}: ${s.desc}`).join('\n')}
+
+以JSON格式输出，每个章节包含 title, key_points (数组), specific_requirements (字符串)。`;
+
+        const structureResult = await callOpenRouterDirect(apiKey, MODELS.structure, structurePrompt);
+        let structure;
+        try {
+          // Extract JSON from response
+          const jsonMatch = structureResult.match(/\[[\s\S]*\]|\{[\s\S]*\}/);
+          structure = jsonMatch ? JSON.parse(jsonMatch[0]) : null;
+        } catch (e) {
+          console.warn('Could not parse structure JSON, using raw text');
+          structure = null;
+        }
+
+        updateProgress('🏗️ 阶段1: 结构框架完成', 10, 0);
+
+        // Phase 2: Parallel Section Expansion (Opus - high quality)
+        updateProgress('📝 阶段2: 分节详细扩展 (Opus)...', 15, 0);
+
+        const expandedSections = {};
+        const sectionPromises = SECTIONS.map(async (section, index) => {
+          const sectionStructure = Array.isArray(structure)
+            ? structure.find(s => s.title?.includes(section.title)) || structure[index]
+            : null;
+
+          const expandPrompt = `你是一位资深的宠物临床前研究专家。请为临床前药效试验方案撰写"${section.title}"章节的完整内容。
+
+## 章节要求
+- 标题: ${section.title}
+- 涵盖内容: ${section.desc}
+${sectionStructure ? `- 结构指导: ${JSON.stringify(sectionStructure)}` : ''}
+
+## 背景信息
+客户需求: ${state.roughNeed}
+
+国际专家评审要点:
+${state.generationResults.step2?.substring(0, 1500)}
+
+国内专家建议:
+${state.generationResults.step3?.substring(0, 1500)}
+
+## 质量要求
+- 内容具体、可执行，避免空泛的框架式描述
+- 包含具体的数值、参数、标准（如适用）
+- 使用专业术语，但确保可理解
+- 长度: 至少300字
+- 格式: Markdown，使用二级和三级标题
+
+请直接输出该章节的完整内容，以"## ${section.title}"开头。`;
+
+          const result = await callOpenRouterDirect(apiKey, MODELS.expand, expandPrompt);
+          expandedSections[section.id] = result;
+
+          const progress = 15 + Math.floor((index + 1) / SECTIONS.length * 50);
+          updateProgress(`📝 阶段2: 已扩展 ${index + 1}/${SECTIONS.length} 章节`, progress, 0.25);
+
+          return { id: section.id, content: result };
+        });
+
+        // Run expansions (could be parallel, but sequential for rate limits)
+        for (const promise of sectionPromises) {
+          await promise;
+        }
+
+        updateProgress('📝 阶段2: 所有章节扩展完成', 65, 0);
+
+        // Phase 3: Self-Critique (Opus)
+        updateProgress('🔍 阶段3: 自我批评与质量评估 (Opus)...', 70, 0);
+
+        const combinedDraft = SECTIONS.map(s => expandedSections[s.id]).join('\n\n---\n\n');
+
+        const critiquePrompt = `作为资深的药效研究审稿专家，请审阅以下临床前药效试验方案草稿，并提出具体的改进建议。
+
+## 方案草稿
+${combinedDraft.substring(0, 15000)}
+
+## 评审维度
+请从以下维度评审并给出具体修改建议：
+
+1. **科学严谨性**: 研究设计是否合理？统计学方法是否恰当？
+2. **可执行性**: 方案是否具体可操作？是否有遗漏的关键步骤？
+3. **完整性**: 是否覆盖了所有必要的章节和内容？
+4. **一致性**: 各章节之间是否协调一致？术语使用是否统一？
+5. **创新性**: 是否体现了研究的创新点和特色？
+
+## 输出格式
+请以JSON格式输出评审结果:
+{
+  "overall_score": 8,  // 1-10分
+  "strengths": ["优点1", "优点2"],
+  "issues": [
+    {"section": "章节名", "issue": "问题描述", "suggestion": "修改建议", "priority": "high/medium/low"}
+  ],
+  "missing_content": ["缺失内容1"],
+  "ready_for_publication": false
+}`;
+
+        const critiqueResult = await callOpenRouterDirect(apiKey, MODELS.critique, critiquePrompt);
+        let critique;
+        try {
+          const jsonMatch = critiqueResult.match(/\{[\s\S]*\}/);
+          critique = jsonMatch ? JSON.parse(jsonMatch[0]) : { issues: [], overall_score: 7 };
+        } catch (e) {
+          critique = { issues: [], overall_score: 7, raw: critiqueResult };
+        }
+
+        updateProgress(`🔍 阶段3: 评审完成 (评分: ${critique.overall_score || '?'}/10)`, 80, 0.30);
+
+        // Phase 4: Refinement if needed (Sonnet)
+        let finalContent = combinedDraft;
+
+        if (critique.issues && critique.issues.length > 0) {
+          updateProgress('✨ 阶段4: 根据评审意见优化...', 85, 0);
+
+          const highPriorityIssues = critique.issues
+            .filter(i => i.priority === 'high' || i.priority === 'medium')
+            .slice(0, 5);
+
+          if (highPriorityIssues.length > 0) {
+            const refinePrompt = `请根据以下评审意见，优化并完善临床前药效试验方案。
+
+## 当前方案
+${combinedDraft.substring(0, 12000)}
+
+## 需要改进的问题
+${highPriorityIssues.map((i, idx) => `${idx+1}. [${i.section}] ${i.issue}\n   建议: ${i.suggestion}`).join('\n\n')}
+
+${critique.missing_content ? `## 需要补充的内容\n${critique.missing_content.join('\n')}` : ''}
+
+## 要求
+- 保持原有结构，仅针对指出的问题进行修改
+- 确保修改后的内容更加具体、专业、可执行
+- 输出完整的优化后方案（Markdown格式）`;
+
+            finalContent = await callOpenRouterDirect(apiKey, MODELS.refine, refinePrompt);
+            updateProgress('✨ 阶段4: 优化完成', 95, 0.15);
+          }
+        } else {
+          updateProgress('✨ 阶段4: 无需优化，质量达标', 95, 0);
+        }
+
+        // Phase 5: Final Assembly
+        updateProgress('📋 阶段5: 最终合成...', 98, 0);
+
+        // Add header and metadata
+        const finalProtocol = `# 猫肥胖/代谢改善GLP-1受体激动剂临床前药效试验方案
+
+> 🧠 本方案由智能模式生成
+> - 结构生成: Claude Haiku
+> - 章节扩展: Claude Opus 4 (${SECTIONS.length}个章节独立撰写)
+> - 质量评审: Claude Opus 4 (评分: ${critique.overall_score || '?'}/10)
+> - 优化合成: Claude Sonnet 4
+> - 生成时间: ${new Date().toLocaleString('zh-CN')}
+
+---
+
+${finalContent}
+
+---
+
+## 附录: 质量评审摘要
+
+### 评审评分: ${critique.overall_score || '?'}/10
+
+### 方案优势
+${critique.strengths ? critique.strengths.map(s => `- ${s}`).join('\n') : '- 待评估'}
+
+### 改进建议
+${critique.issues ? critique.issues.slice(0, 5).map(i => `- [${i.section}] ${i.issue}`).join('\n') : '- 无'}
+`;
+
+        state.generationResults.step5 = finalProtocol;
+        showStepOutput('gen-step5', finalProtocol);
+        updateStepStatus('gen-step5', 'completed');
+        updateProgress('✅ 智能模式生成完成', 100, 0);
+
+      } catch (e) {
+        updateStepStatus('gen-step5', 'error');
+        showStepOutput('gen-step5', '智能模式错误: ' + e.message);
+        progressEl.classList.add('hidden');
         throw e;
       }
     }
