@@ -539,9 +539,15 @@
     </div>
   </div>
 
+  <!-- Load expert configuration for client-side fallback -->
+  <script src="expert-config-extended.js"></script>
+
   <script>
     // Constants
     const PROXY_URL = 'http://localhost:3456';
+
+    // Detect if running on GitHub Pages (no proxy available)
+    const IS_GITHUB_PAGES = window.location.hostname.includes('github.io');
 
     // State
     let state = {
@@ -777,9 +783,29 @@
       updateIndicator(2);
 
       try {
-        // Get experts from proxy
-        const res = await fetch(`${PROXY_URL}/api/experts`);
-        const expertPool = await res.json();
+        let expertPool;
+
+        // Try proxy first, fall back to client-side EXPERT_POOL for GitHub Pages
+        if (!IS_GITHUB_PAGES) {
+          try {
+            const res = await fetch(`${PROXY_URL}/api/experts`);
+            if (res.ok) {
+              expertPool = await res.json();
+            }
+          } catch (proxyError) {
+            console.warn('Proxy unavailable, using client-side expert pool:', proxyError.message);
+          }
+        }
+
+        // Fallback to client-side EXPERT_POOL (from expert-config-extended.js)
+        if (!expertPool && typeof EXPERT_POOL !== 'undefined') {
+          expertPool = EXPERT_POOL;
+          console.log('Using client-side EXPERT_POOL fallback');
+        }
+
+        if (!expertPool) {
+          throw new Error('无法加载专家库：代理服务器不可用，且客户端专家配置未加载');
+        }
 
         // Select metabolism experts
         const metabolismExperts = expertPool.metabolism?.experts || [];
