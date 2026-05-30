@@ -1130,7 +1130,11 @@ ${state.knowledgeContext ? '## 知识库参考\n' + state.knowledgeContext + '\n
     checkProxyStatus();
     loadApiKey();
     checkHandoff();  // Check for handoff from intake-parser
-    setInterval(checkProxyStatus, 10000);
+
+    // Only poll proxy status when running locally (not on GitHub Pages)
+    if (!IS_GITHUB_PAGES) {
+      setInterval(checkProxyStatus, 10000);
+    }
   </script>
 </body>
 </html>
